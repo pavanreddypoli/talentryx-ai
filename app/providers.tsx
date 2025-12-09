@@ -1,14 +1,31 @@
 "use client";
 
-import { SessionContextProvider } from "@supabase/auth-helpers-react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabaseClient";
 
+const SupabaseContext = createContext<any>(null);
+
 export default function Providers({ children }: { children: React.ReactNode }) {
-  const supabase = createSupabaseBrowserClient();
+  const [client] = useState(() => createSupabaseBrowserClient());
+  const [session, setSession] = useState<any>(null);
+
+  useEffect(() => {
+    client.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+    });
+
+    client.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+    });
+  }, [client]);
 
   return (
-    <SessionContextProvider supabaseClient={supabase}>
+    <SupabaseContext.Provider value={{ supabase: client, session }}>
       {children}
-    </SessionContextProvider>
+    </SupabaseContext.Provider>
   );
+}
+
+export function useSupabase() {
+  return useContext(SupabaseContext);
 }
