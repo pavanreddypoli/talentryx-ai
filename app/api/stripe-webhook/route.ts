@@ -5,11 +5,8 @@ import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 // Admin client (service_role)
 const supabase = createSupabaseAdminClient();
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";  // ensures raw body support
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2023-10-16",
