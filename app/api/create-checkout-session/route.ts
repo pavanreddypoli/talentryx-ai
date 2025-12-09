@@ -2,9 +2,8 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2023-10-16",
-});
+// ✅ Fixed: remove apiVersion config object
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST() {
   try {
@@ -52,11 +51,11 @@ export async function POST() {
     // Create checkout session
     const sessionObj = await stripe.checkout.sessions.create({
       mode: "subscription",
-      customer: customerId,
+      customer: customerId!,
       payment_method_types: ["card"],
       line_items: [
         {
-          price: "price_12345_pro_month", // Replace with your actual Stripe Price ID
+          price: "price_12345_pro_month", // 🔸 You can later switch to process.env.STRIPE_PRICE_PRO
           quantity: 1,
         },
       ],
@@ -65,7 +64,6 @@ export async function POST() {
     });
 
     return NextResponse.json({ url: sessionObj.url });
-
   } catch (error) {
     console.error("STRIPE CHECKOUT ERROR:", error);
     return NextResponse.json({ error: "Stripe error" }, { status: 500 });
