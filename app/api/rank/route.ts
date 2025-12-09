@@ -177,8 +177,8 @@ export async function POST(req: Request) {
       let text = "";
       
       if (file.name.toLowerCase().endsWith(".pdf")) {
-        const pdfModule = await import("pdf-parse");
-        const pdfParse = pdfModule.default ?? pdfModule; // ✅ works in Vercel
+        const pdfModule: any = await import("pdf-parse");
+        const pdfParse = pdfModule; // use the module directly
         const parsed = await pdfParse(buffer);
         text = parsed.text || "";
       } else if (file.name.toLowerCase().endsWith(".docx")) {
