@@ -1,16 +1,8 @@
-import Stripe from "stripe";
 import { NextResponse } from "next/server";
-import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
+import Stripe from "stripe";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
-// Admin client (service_role)
-const supabase = createSupabaseAdminClient();
-
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";  // ensures raw body support
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2023-10-16",
-});
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);  // ← FIXED (removed apiVersion)
 
 async function buffer(readable: any) {
   const chunks = [];
@@ -21,49 +13,34 @@ async function buffer(readable: any) {
 }
 
 export async function POST(req: Request) {
-  const rawBody = await buffer(req.body);
+  const buf = await buffer(req.body);
   const sig = req.headers.get("stripe-signature")!;
 
   let event;
 
   try {
     event = stripe.webhooks.constructEvent(
-      rawBody,
+      buf,
       sig,
       process.env.STRIPE_WEBHOOK_SECRET!
     );
   } catch (err: any) {
-    console.error("❌ Webhook signature verification failed:", err.message);
-    return NextResponse.json({ error: err.message }, { status: 400 });
+    console.error("⚠️ Webhook signature verification failed.", err.message);
+    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  const data = event.data.object as any;
+  const supabase = await createSupabaseServerClient();
 
-  switch (event.type) {
-    case "customer.subscription.created":
-    case "customer.subscription.updated":
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+
+    const userId = session.metadata?.supabase_user_id;
+    if (userId) {
       await supabase
         .from("profiles")
-        .update({
-          subscription_status: "pro",
-          stripe_subscription_id: data.id,
-        })
-        .eq("stripe_customer_id", data.customer);
-      break;
-
-    case "customer.subscription.deleted":
-      await supabase
-        .from("profiles")
-        .update({
-          subscription_status: "free",
-          stripe_subscription_id: null,
-        })
-        .eq("stripe_customer_id", data.customer);
-      break;
-
-    case "checkout.session.completed":
-      console.log("Checkout completed");
-      break;
+        .update({ is_pro: true })
+        .eq("id", userId);
+    }
   }
 
   return NextResponse.json({ received: true });
