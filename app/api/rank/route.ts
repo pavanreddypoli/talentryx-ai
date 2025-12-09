@@ -175,8 +175,10 @@ export async function POST(req: Request) {
 
       // Extract text
       let text = "";
+      
       if (file.name.toLowerCase().endsWith(".pdf")) {
-        const pdfParse = await import("pdf-parse").then((m) => m.default);
+        const pdfModule = await import("pdf-parse");
+        const pdfParse = pdfModule.default ?? pdfModule; // ✅ works in Vercel
         const parsed = await pdfParse(buffer);
         text = parsed.text || "";
       } else if (file.name.toLowerCase().endsWith(".docx")) {
