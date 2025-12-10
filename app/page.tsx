@@ -26,13 +26,13 @@ export default function HomePage() {
           </nav>
           <div className="flex items-center gap-3">
             <Link
-              href="/dashboard"
+              href="/login"
               className="text-sm text-slate-700 hover:text-slate-900"
             >
               Log in
             </Link>
             <Link
-              href="/dashboard"
+              href="/signup"
               className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
             >
               Get started
