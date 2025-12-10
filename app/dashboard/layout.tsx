@@ -1,18 +1,22 @@
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { redirect } from "next/navigation";
 
-// Import your existing client component
+// This imports the FULL client-side dashboard layout (sidebar + mobile menu)
 import DashboardClientLayout from "./layoutClient";
 
-export default async function DashboardLayoutWrapper({ children }) {
+export default async function DashboardLayoutWrapper({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase.auth.getUser();
 
-  // ❗ If NOT logged in → redirect to login page
+  // 🚫 Not logged in? Go to login page.
   if (!data.user) {
     redirect("/login");
   }
 
-  // If logged in, show your full dashboard UI
+  // ✔ Logged in → Render the full client UI
   return <DashboardClientLayout>{children}</DashboardClientLayout>;
 }
