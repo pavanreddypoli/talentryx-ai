@@ -22,7 +22,8 @@ export default function SignupPage() {
     setLoading(true);
     setError("");
 
-    const { error } = await supabase.auth.signUp({
+    // 🌟 Create user in Supabase Auth
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
     });
@@ -33,7 +34,17 @@ export default function SignupPage() {
       return;
     }
 
-    router.push("/dashboard");
+    // 🌟 DO NOT insert into profiles — trigger handles that now.
+    //    No need for: supabase.from("profiles").insert({})
+
+    // Optional: If email confirmation is ON, user must check email.
+    // Redirect to dashboard only if session exists.
+    if (data.session) {
+      router.push("/dashboard");
+    } else {
+      // For email confirmations ON
+      router.push("/after-login");
+    }
   };
 
   return (
@@ -42,6 +53,7 @@ export default function SignupPage() {
                  bg-gradient-to-br from-indigo-600 to-indigo-900"
     >
       <div className="w-full max-w-sm bg-white rounded-xl shadow-xl p-8">
+
         {/* Logo + Brand */}
         <div className="text-center mb-6">
           <h1 className="text-xl font-bold flex justify-center items-center gap-2 text-indigo-700">
