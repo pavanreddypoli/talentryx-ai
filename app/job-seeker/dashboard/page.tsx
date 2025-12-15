@@ -1,8 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function JobSeekerDashboard() {
+  const router = useRouter();
+
+  // 🔒 ROLE GUARD — block recruiters
+  useEffect(() => {
+    fetch("/api/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.user_type !== "job_seeker") {
+          router.replace("/dashboard");
+        }
+      });
+  }, [router]);
+
+  // ─────────────────────────────────────
+  // Existing code (UNCHANGED)
+  // ─────────────────────────────────────
   const [resume, setResume] = useState<File | null>(null);
   const [jobDesc, setJobDesc] = useState("");
 
