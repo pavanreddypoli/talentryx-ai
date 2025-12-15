@@ -4,7 +4,8 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 /**
  * Returns the user's active role.
- * Uses service role (no cookies, no auth helpers).
+ * Uses service-role Supabase client ONLY.
+ * No cookies. No auth helpers. No SSR client.
  */
 export async function GET(req: Request) {
   try {
