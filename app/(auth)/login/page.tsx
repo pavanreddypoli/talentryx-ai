@@ -14,6 +14,10 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // ✅ NEW: role selection state
+  const [role, setRole] = useState<"recruiter" | "job_seeker">("recruiter");
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -22,11 +26,12 @@ export default function LoginPage() {
     const checkSession = async () => {
       const { data } = await supabase.auth.getUser();
       if (data?.user) {
-        router.push("/dashboard");
+        // go through after-login so role logic is consistent
+        router.push(`/after-login?role=${role}`);
       }
     };
     checkSession();
-  }, []);
+  }, [router, supabase, role]);
 
   const handleLogin = async (e: any) => {
     e.preventDefault();
@@ -51,7 +56,8 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dashboard");
+    // ✅ Redirect with explicit role intent
+    router.push(`/after-login?role=${role}`);
   };
 
   return (
@@ -92,6 +98,32 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
           />
 
+          {/* 🔑 ROLE SELECTION (NEW) */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700">
+              I am signing in as
+            </label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  checked={role === "recruiter"}
+                  onChange={() => setRole("recruiter")}
+                />
+                Recruiter
+              </label>
+
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  checked={role === "job_seeker"}
+                  onChange={() => setRole("job_seeker")}
+                />
+                Job Seeker
+              </label>
+            </div>
+          </div>
+
           <Button
             type="submit"
             disabled={loading}
@@ -104,7 +136,10 @@ export default function LoginPage() {
         {/* Footer */}
         <p className="text-center text-sm mt-4">
           Don’t have an account?{" "}
-          <Link href="/signup" className="text-indigo-600 font-medium hover:underline">
+          <Link
+            href="/signup"
+            className="text-indigo-600 font-medium hover:underline"
+          >
             Sign Up
           </Link>
         </p>
