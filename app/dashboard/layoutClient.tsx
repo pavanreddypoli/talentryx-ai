@@ -31,7 +31,23 @@ export default function DashboardClientLayout({
   const [mounted, setMounted] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // ✅ EXISTING
   useEffect(() => setMounted(true), []);
+
+  // 🔒 NEW: Client-side role guard
+  // Ensures job seekers are redirected away from recruiter dashboard
+  useEffect(() => {
+    fetch("/api/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.user_type === "job_seeker") {
+          window.location.href = "/job-seeker/dashboard";
+        }
+      })
+      .catch(() => {
+        // fail silently — server guard still exists
+      });
+  }, []);
 
   return (
     <div className="min-h-screen flex bg-slate-50 dark:bg-slate-900">
