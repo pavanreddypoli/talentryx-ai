@@ -24,7 +24,12 @@ export default function AfterLogin() {
       });
 
       // 🔐 NEW: Ask server (Supabase) for authoritative user role
-      const res = await fetch("/api/me");
+      const res = await fetch("/api/me", {
+        headers: {
+          "x-user-email": localStorage.getItem("user_email") || "",
+        },
+      });
+
       const data = await res.json();
 
       // 🚀 Redirect to the right experience (DB-driven)
