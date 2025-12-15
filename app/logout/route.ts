@@ -8,5 +8,5 @@ export async function POST() {
   await supabase.auth.signOut();
 
   // Redirect to login page
-  redirect("/login");
+  redirect("/");
 }

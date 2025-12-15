@@ -10,13 +10,31 @@ export default async function DashboardLayoutWrapper({
   children: React.ReactNode;
 }) {
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.auth.getUser();
 
-  // 🚫 Not logged in? Go to login page.
-  if (!data.user) {
+  // 🔐 Auth check (existing)
+  const { data: authData } = await supabase.auth.getUser();
+
+  if (!authData.user) {
     redirect("/login");
   }
 
-  // ✔ Logged in → Render the full client UI
+  // 🧠 NEW: Fetch user role from DB
+  const { data: userRecord, error } = await supabase
+    .from("users")
+    .select("active_role")
+    .eq("email", authData.user.email)
+    .single();
+
+  if (error) {
+    console.error("Failed to load user role:", error);
+    redirect("/login");
+  }
+
+  // 🚫 BLOCK job seekers from recruiter dashboard
+  if (userRecord.active_role === "job_seeker") {
+    redirect("/job-seeker/dashboard");
+  }
+
+  // ✔ Recruiter → allow dashboard
   return <DashboardClientLayout>{children}</DashboardClientLayout>;
 }
