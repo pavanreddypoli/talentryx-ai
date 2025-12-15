@@ -3,10 +3,12 @@
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Sparkles } from "lucide-react";
+import { createSupabaseBrowserClient } from "@/lib/supabaseClient";
 
 export default function AfterLoginClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     async function sync() {
@@ -22,16 +24,33 @@ export default function AfterLoginClient() {
 
       const effectiveRole = roleFromQuery || roleFromStorage || "recruiter";
 
-      await fetch("/api/sync-user", {
-        method: "POST",
-        headers: {
-          "x-user-type": effectiveRole,
-        },
-      });
+      // 🔑 NEW: get authenticated user (needed for signup flow)
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
+      // 🔄 Sync user + role into Supabase DB
+      if (user?.email) {
+        await fetch("/api/sync-user", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-user-type": effectiveRole,
+          },
+          body: JSON.stringify({
+            email: user.email,
+            fullName:
+              user.user_metadata?.full_name ||
+              user.email.split("@")[0],
+          }),
+        });
+      }
+
+      // 🔐 Fetch authoritative role from backend
       const res = await fetch("/api/me");
       const data = await res.json();
 
+      // 🚀 Redirect based on ACTIVE ROLE
       if (data?.user_type === "job_seeker") {
         router.push("/job-seeker/dashboard");
       } else {
@@ -40,7 +59,7 @@ export default function AfterLoginClient() {
     }
 
     sync();
-  }, [router, searchParams]);
+  }, [router, searchParams, supabase]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-600 to-indigo-900 p-6 text-white">
