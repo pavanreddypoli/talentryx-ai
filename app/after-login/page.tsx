@@ -1,29 +1,38 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Sparkles } from "lucide-react";
 
 export default function AfterLogin() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     async function sync() {
-      // ✅ Read entry intent (set from /recruiter or /job-seeker)
-      const userType =
+      // ✅ NEW: Read explicit role intent from Login / Signup
+      const roleFromQuery =
+        searchParams.get("role") === "job_seeker"
+          ? "job_seeker"
+          : "recruiter";
+
+      // ♻️ BACKWARD COMPATIBILITY (keep existing behavior)
+      const roleFromStorage =
         typeof window !== "undefined"
           ? localStorage.getItem("talentryx_user_type")
           : null;
+
+      const effectiveRole = roleFromQuery || roleFromStorage || "recruiter";
 
       // 🔄 Sync user profile in Supabase (with role persistence)
       await fetch("/api/sync-user", {
         method: "POST",
         headers: {
-          "x-user-type": userType || "recruiter",
+          "x-user-type": effectiveRole,
         },
       });
 
-      // 🔐 NEW: Ask server (Supabase) for authoritative user role
+      // 🔐 Ask server (Supabase) for authoritative role
       const res = await fetch("/api/me", {
         headers: {
           "x-user-email": localStorage.getItem("user_email") || "",
@@ -32,17 +41,16 @@ export default function AfterLogin() {
 
       const data = await res.json();
 
-      // 🚀 Redirect to the right experience (DB-driven)
+      // 🚀 Redirect based on ACTIVE ROLE (DB-driven)
       if (data?.user_type === "job_seeker") {
         router.push("/job-seeker/dashboard");
       } else {
-        // Default recruiter flow
         router.push("/dashboard");
       }
     }
 
     sync();
-  }, [router]);
+  }, [router, searchParams]);
 
   return (
     <div

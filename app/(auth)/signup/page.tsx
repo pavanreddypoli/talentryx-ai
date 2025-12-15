@@ -14,6 +14,7 @@ export default function SignupPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState<"recruiter" | "job_seeker">("recruiter");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -22,7 +23,6 @@ export default function SignupPage() {
     setLoading(true);
     setError("");
 
-    // 🌟 Create user in Supabase Auth
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -34,27 +34,18 @@ export default function SignupPage() {
       return;
     }
 
-    // 🌟 DO NOT insert into profiles — trigger handles that now.
-    //    No need for: supabase.from("profiles").insert({})
-
-    // Optional: If email confirmation is ON, user must check email.
-    // Redirect to dashboard only if session exists.
+    // Redirect with role intent
     if (data.session) {
-      router.push("/dashboard");
+      router.push(`/after-login?role=${role}`);
     } else {
-      // For email confirmations ON
-      router.push("/after-login");
+      router.push(`/after-login?role=${role}`);
     }
   };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-6 
-                 bg-gradient-to-br from-indigo-600 to-indigo-900"
-    >
+    <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-indigo-600 to-indigo-900">
       <div className="w-full max-w-sm bg-white rounded-xl shadow-xl p-8">
 
-        {/* Logo + Brand */}
         <div className="text-center mb-6">
           <h1 className="text-xl font-bold flex justify-center items-center gap-2 text-indigo-700">
             <Sparkles className="h-5 w-5 text-yellow-400" />
@@ -66,9 +57,7 @@ export default function SignupPage() {
         </div>
 
         <form onSubmit={handleSignup} className="space-y-4">
-          {error && (
-            <p className="text-red-600 text-sm text-center">{error}</p>
-          )}
+          {error && <p className="text-red-600 text-sm text-center">{error}</p>}
 
           <Input
             type="email"
@@ -85,6 +74,31 @@ export default function SignupPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+
+          {/* 🔑 ROLE SELECTION */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700">
+              I am signing up as
+            </label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  checked={role === "recruiter"}
+                  onChange={() => setRole("recruiter")}
+                />
+                Recruiter
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  checked={role === "job_seeker"}
+                  onChange={() => setRole("job_seeker")}
+                />
+                Job Seeker
+              </label>
+            </div>
+          </div>
 
           <Button
             type="submit"
