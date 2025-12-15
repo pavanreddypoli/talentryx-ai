@@ -13,7 +13,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
  *     "x-user-type": "recruiter" | "job_seeker"
  *   },
  *   body: JSON.stringify({
- *     externalUserId,   // optional, e.g. auth provider id
+ *     externalUserId,   // optional
  *     email,
  *     fullName,
  *   }),
@@ -22,14 +22,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => null);
-
     const { externalUserId, email, fullName } = body || {};
-
-    // 🔽 NEW: read user_type from header (safe default)
-    const userTypeFromHeader =
-      req.headers.get("x-user-type") === "job_seeker"
-        ? "job_seeker"
-        : "recruiter";
 
     if (!email || !fullName) {
       return NextResponse.json(
@@ -38,19 +31,26 @@ export async function POST(req: Request) {
       );
     }
 
-    // 1️⃣ CHECK IF USER EXISTS IN SUPABASE (by email or external id)
-    const { data: existingUser, error: existingUserError } = await supabaseAdmin
-      .from("users")
-      .select("*")
-      .or(
-        [
-          externalUserId ? `external_user_id.eq.${externalUserId}` : "",
-          `email.eq.${email}`,
-        ]
-          .filter(Boolean)
-          .join(",")
-      )
-      .single();
+    // 🔹 Determine incoming role (default recruiter)
+    const incomingRole =
+      req.headers.get("x-user-type") === "job_seeker"
+        ? "job_seeker"
+        : "recruiter";
+
+    // 1️⃣ CHECK IF USER EXISTS
+    const { data: existingUser, error: existingUserError } =
+      await supabaseAdmin
+        .from("users")
+        .select("*")
+        .or(
+          [
+            externalUserId ? `external_user_id.eq.${externalUserId}` : "",
+            `email.eq.${email}`,
+          ]
+            .filter(Boolean)
+            .join(",")
+        )
+        .single();
 
     if (existingUserError && existingUserError.code !== "PGRST116") {
       console.error("Error checking existing user:", existingUserError);
@@ -64,18 +64,21 @@ export async function POST(req: Request) {
 
     // 2️⃣ CREATE USER IF NOT EXISTING
     if (!existingUser) {
-      const { data: newUser, error: createUserError } = await supabaseAdmin
-        .from("users")
-        .insert({
-          external_user_id: externalUserId ?? null,
-          email,
-          full_name: fullName,
-          plan: "free",
-          // 🔽 NEW: persist user_type
-          user_type: userTypeFromHeader,
-        })
-        .select()
-        .single();
+      const { data: newUser, error: createUserError } =
+        await supabaseAdmin
+          .from("users")
+          .insert({
+            external_user_id: externalUserId ?? null,
+            email,
+            full_name: fullName,
+            plan: "free",
+
+            // ✅ NEW: role support
+            roles: [incomingRole],
+            active_role: incomingRole,
+          })
+          .select()
+          .single();
 
       if (createUserError) {
         console.error("Error creating user:", createUserError);
@@ -88,12 +91,37 @@ export async function POST(req: Request) {
       supabaseUserId = newUser.id;
     }
 
-    // 3️⃣ CHECK FOR ORGANIZATION
-    const { data: existingOrg, error: existingOrgError } = await supabaseAdmin
-      .from("organizations")
-      .select("*")
-      .eq("owner_id", supabaseUserId)
-      .single();
+    // 2.5️⃣ UPDATE ROLES IF USER EXISTS
+    if (existingUser) {
+      const existingRoles: string[] = existingUser.roles || [];
+
+      // Add role if missing
+      if (!existingRoles.includes(incomingRole)) {
+        await supabaseAdmin
+          .from("users")
+          .update({
+            roles: [...existingRoles, incomingRole],
+            active_role: incomingRole,
+          })
+          .eq("id", supabaseUserId);
+      } else {
+        // Just update active role
+        await supabaseAdmin
+          .from("users")
+          .update({
+            active_role: incomingRole,
+          })
+          .eq("id", supabaseUserId);
+      }
+    }
+
+    // 3️⃣ CHECK FOR ORGANIZATION (UNCHANGED)
+    const { data: existingOrg, error: existingOrgError } =
+      await supabaseAdmin
+        .from("organizations")
+        .select("*")
+        .eq("owner_id", supabaseUserId)
+        .single();
 
     if (existingOrgError && existingOrgError.code !== "PGRST116") {
       console.error("Error checking existing org:", existingOrgError);
@@ -105,7 +133,7 @@ export async function POST(req: Request) {
 
     let orgId = existingOrg?.id;
 
-    // 4️⃣ CREATE ORGANIZATION IF NEEDED
+    // 4️⃣ CREATE ORGANIZATION IF NEEDED (UNCHANGED)
     if (!existingOrg) {
       const { data: newOrg, error: orgError } = await supabaseAdmin
         .from("organizations")
@@ -126,7 +154,7 @@ export async function POST(req: Request) {
 
       orgId = newOrg.id;
 
-      // 5️⃣ ADD USER TO ORGANIZATION MEMBERS
+      // 5️⃣ ADD USER TO ORGANIZATION MEMBERS (UNCHANGED)
       const { error: memberError } = await supabaseAdmin
         .from("organization_members")
         .insert({
@@ -137,7 +165,6 @@ export async function POST(req: Request) {
 
       if (memberError) {
         console.error("Error creating org member:", memberError);
-        // not fatal for response, but log it
       }
     }
 
@@ -145,6 +172,7 @@ export async function POST(req: Request) {
       success: true,
       supabaseUserId,
       orgId,
+      activeRole: incomingRole,
     });
   } catch (err) {
     console.error("sync-user route error:", err);

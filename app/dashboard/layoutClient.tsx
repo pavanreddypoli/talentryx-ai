@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import RoleSwitcher from "@/components/RoleSwitcher";
 
 import {
   LayoutDashboard,
@@ -36,9 +37,11 @@ export default function DashboardClientLayout({
     <div className="min-h-screen flex bg-slate-50 dark:bg-slate-900">
 
       {/* 🌟 MOBILE NAVBAR */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-40
-                      bg-white dark:bg-slate-800 border-b dark:border-slate-700 
-                      px-4 py-3 flex items-center justify-between shadow-sm">
+      <div
+        className="md:hidden fixed top-0 left-0 right-0 z-40
+                   bg-white dark:bg-slate-800 border-b dark:border-slate-700
+                   px-4 py-3 flex items-center justify-between shadow-sm"
+      >
         <div className="flex items-center gap-2">
           <div className="h-7 w-7 bg-indigo-600 rounded-lg" />
           <span className="font-bold text-indigo-700 dark:text-indigo-300 text-lg">
@@ -46,12 +49,16 @@ export default function DashboardClientLayout({
           </span>
         </div>
 
-        <button
-          onClick={() => setSidebarOpen(true)}
-          className="text-slate-700 dark:text-slate-200"
-        >
-          <Menu className="h-6 w-6" />
-        </button>
+        {/* 🔁 ROLE SWITCHER (mobile) */}
+        <div className="flex items-center gap-3">
+          <RoleSwitcher />
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="text-slate-700 dark:text-slate-200"
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+        </div>
       </div>
 
       {/* 🌟 BACKDROP (mobile) */}
@@ -92,6 +99,11 @@ export default function DashboardClientLayout({
           >
             <X className="h-5 w-5" />
           </button>
+        </div>
+
+        {/* 🔁 ROLE SWITCHER (desktop, sidebar header area) */}
+        <div className="hidden md:flex px-6 py-3 border-b dark:border-slate-700">
+          <RoleSwitcher />
         </div>
 
         {/* NAV LINKS */}
@@ -143,7 +155,9 @@ export default function DashboardClientLayout({
       </aside>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 md:ml-64 p-6 pt-20 md:pt-6">{children}</main>
+      <main className="flex-1 md:ml-64 p-6 pt-20 md:pt-6">
+        {children}
+      </main>
     </div>
   );
 }
