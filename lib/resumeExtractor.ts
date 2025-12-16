@@ -36,19 +36,21 @@ export async function extractDocText(buffer: Buffer): Promise<string> {
 }
 
 /* -------------------------
-   PDF extraction (ESM-safe)
+   PDF extraction (Vercel + Next 16 safe)
 ------------------------- */
 export async function extractPdfText(buffer: Buffer): Promise<string> {
   try {
-    // IMPORTANT: pdf-parse has NO default export in ESM
-    const pdfModule = await import("pdf-parse");
-    const parsed = await pdfModule.default(buffer);
+    // Use require to bypass ESM typing issues in pdf-parse
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const pdfParse = require("pdf-parse");
+    const parsed = await pdfParse(buffer);
     return parsed?.text || "";
   } catch (err) {
     console.error("PDF parse error:", err);
     return "";
   }
 }
+
 
 /* -------------------------
    Unified extractor (optional)
