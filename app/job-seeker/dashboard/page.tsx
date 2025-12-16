@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import DashboardClient from "@/app/dashboard/DashboardClient"; // ✅ NEW: reuse recruiter features
 
 export default function JobSeekerDashboard() {
   // ─────────────────────────────────────
@@ -53,12 +54,12 @@ export default function JobSeekerDashboard() {
   return (
     <main className="min-h-screen bg-slate-50 p-6">
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
-
         <h1 className="text-2xl font-bold text-indigo-700 mb-2">
           Resume Match Dashboard
         </h1>
         <p className="text-slate-600 mb-6">
-          Upload your resume and paste the job description to see how well you match.
+          Upload your resume and paste the job description to see how well you
+          match.
         </p>
 
         {/* Resume Upload (UNCHANGED) */}
@@ -101,11 +102,7 @@ export default function JobSeekerDashboard() {
         </div>
 
         {/* NEW: Error */}
-        {error && (
-          <div className="mt-4 text-sm text-red-600">
-            {error}
-          </div>
-        )}
+        {error && <div className="mt-4 text-sm text-red-600">{error}</div>}
 
         {/* NEW: Result */}
         {result && (
@@ -114,9 +111,7 @@ export default function JobSeekerDashboard() {
               Match Score: {result.score}%
             </h2>
 
-            <p className="mb-3 text-slate-700">
-              {result.summary}
-            </p>
+            <p className="mb-3 text-slate-700">{result.summary}</p>
 
             {result.strengths && (
               <div className="mb-3">
@@ -141,7 +136,11 @@ export default function JobSeekerDashboard() {
             )}
           </div>
         )}
+      </div>
 
+      {/* ✅ NEW: Reuse recruiter dashboard feature panels (Boost to 80+, Rewrite with AI, ATS, History, etc.) */}
+      <div className="max-w-5xl mx-auto mt-8">
+        <DashboardClient />
       </div>
     </main>
   );
