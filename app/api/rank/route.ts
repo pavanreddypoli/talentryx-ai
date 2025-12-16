@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import officeParser from "officeparser";
 import mammoth from "mammoth";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import {
+  extractPdfText,
+  extractDocText,
+  extractDocxText,
+} from "@/lib/resumeExtractor";
 
 // -------------------------
 // DOCX extraction

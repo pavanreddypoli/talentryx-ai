@@ -1,26 +1,49 @@
 import mammoth from "mammoth";
-import pdf from "pdf-parse";
-import textract from "textract";
+import officeParser from "officeparser";
 
 /* -------------------------
-   DOCX
+   DOCX extraction
 ------------------------- */
-async function extractDocxText(buffer: Buffer): Promise<string> {
+export async function extractDocxText(buffer: Buffer): Promise<string> {
   try {
     const result = await mammoth.extractRawText({ buffer });
-    return result.value || "";
-  } catch {
-    return buffer.toString("utf-8");
+    return result?.value || "";
+  } catch (err) {
+    console.error("DOCX parse error:", err);
+    return "";
   }
 }
 
 /* -------------------------
-   PDF
+   DOC (legacy) extraction
 ------------------------- */
-async function extractPdfText(buffer: Buffer): Promise<string> {
+export async function extractDocText(buffer: Buffer): Promise<string> {
   try {
-    const data = await pdf(buffer);
-    return data.text || "";
+    return await new Promise<string>((resolve) => {
+      officeParser.parseOffice(buffer, (data, err) => {
+        if (err) {
+          console.error("DOC parse error:", err);
+          resolve("");
+        } else {
+          resolve(data || "");
+        }
+      });
+    });
+  } catch (err) {
+    console.error("DOC parse fatal error:", err);
+    return "";
+  }
+}
+
+/* -------------------------
+   PDF extraction (ESM-safe)
+------------------------- */
+export async function extractPdfText(buffer: Buffer): Promise<string> {
+  try {
+    // IMPORTANT: pdf-parse has NO default export in ESM
+    const pdfModule = await import("pdf-parse");
+    const parsed = await pdfModule.default(buffer);
+    return parsed?.text || "";
   } catch (err) {
     console.error("PDF parse error:", err);
     return "";
@@ -28,43 +51,21 @@ async function extractPdfText(buffer: Buffer): Promise<string> {
 }
 
 /* -------------------------
-   DOC (legacy)
-------------------------- */
-async function extractDocText(buffer: Buffer): Promise<string> {
-  return new Promise((resolve) => {
-    textract.fromBufferWithMime(
-      "application/msword",
-      buffer,
-      (error, text) => {
-        if (error) {
-          console.error("DOC parse error:", error);
-          resolve("");
-        } else {
-          resolve(text || "");
-        }
-      }
-    );
-  });
-}
-
-/* -------------------------
-   Unified extractor
+   Unified extractor (optional)
 ------------------------- */
 export async function extractResumeText(
   buffer: Buffer,
-  mimeType: string
+  filename: string
 ): Promise<string> {
-  switch (mimeType) {
-    case "application/pdf":
-      return extractPdfText(buffer);
+  const name = filename.toLowerCase();
 
-    case "application/msword":
-      return extractDocText(buffer);
+  if (name.endsWith(".pdf")) return extractPdfText(buffer);
+  if (name.endsWith(".docx")) return extractDocxText(buffer);
+  if (name.endsWith(".doc")) return extractDocText(buffer);
 
-    case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-      return extractDocxText(buffer);
-
-    default:
-      return buffer.toString("utf-8");
+  try {
+    return buffer.toString("utf-8");
+  } catch {
+    return "";
   }
 }
