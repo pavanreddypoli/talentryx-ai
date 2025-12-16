@@ -13,6 +13,7 @@ export default async function JobSeekerDashboardLayout({
     data: { session },
   } = await supabase.auth.getSession();
 
+  // 🔒 Protect route
   if (!session) {
     redirect("/login");
   }
