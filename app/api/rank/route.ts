@@ -40,25 +40,6 @@ async function extractDocText(buffer: Buffer): Promise<string> {
 }
 
 // -------------------------
-// PDF extraction
-// -------------------------
-let text = "";
-
-if (file.name.toLowerCase().endsWith(".pdf")) {
-  text = await extractPdfText(buffer);
-} else if (file.name.toLowerCase().endsWith(".docx")) {
-  text = await extractDocxText(buffer);
-} else if (file.name.toLowerCase().endsWith(".doc")) {
-  text = await extractDocText(buffer);
-} else {
-  try {
-    text = buffer.toString("utf-8");
-  } catch {
-    text = "";
-  }
-}
-
-// -------------------------
 function normalizeText(text: string) {
   return text.replace(/\s+/g, " ").trim();
 }
