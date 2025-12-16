@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import officeParser from "officeparser";
 import mammoth from "mammoth";
-import textract from "textract";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
 // -------------------------
