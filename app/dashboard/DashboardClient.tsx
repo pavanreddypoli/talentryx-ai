@@ -58,6 +58,7 @@ export default function DashboardClient() {
     onDrop,
     accept: {
       "application/pdf": [],
+      "application/msword": [], // <-- DOC (legacy Word)
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
         [],
     },
@@ -138,7 +139,7 @@ export default function DashboardClient() {
             >
               <input {...getInputProps()} />
               <Upload className="mx-auto mb-2 text-indigo-600" />
-              <p className="text-sm">Upload your resume (PDF/DOCX)</p>
+              <p className="text-sm">Upload your resume (PDF/DOCX/DOC)</p>
 
               {files.length > 0 && (
                 <div className="mt-3 text-xs text-slate-600">
