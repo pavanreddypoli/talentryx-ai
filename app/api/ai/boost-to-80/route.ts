@@ -28,13 +28,13 @@ ${jd}
   });
 
   const score = parseFloat(result.choices[0].message.content || "0");
-
   return isNaN(score) ? 0 : score;
 }
 
 // === REWRITE PROMPT ===
-async function rewriteResume(resume: string, jd: string): Promise<string> {
-  const rewritePrompt = `
+async function rewriteResume(resume: string, jd?: string): Promise<string> {
+  const rewritePrompt = jd
+    ? `
 Rewrite this resume so that it better matches the job description.
 Keep it truthful, concise, ATS friendly, and achievement-driven.
 
@@ -43,6 +43,15 @@ ${resume}
 
 Job Description:
 ${jd}
+
+Return only the rewritten resume text.
+`
+    : `
+Rewrite this resume to improve clarity, impact, and ATS friendliness.
+Keep it truthful, concise, and achievement-driven.
+
+Resume:
+${resume}
 
 Return only the rewritten resume text.
 `;
@@ -58,14 +67,38 @@ Return only the rewritten resume text.
 
 export async function POST(req: Request) {
   try {
-    const { resume, jd } = await req.json();
+    const body = await req.json();
 
-    if (!resume || !jd) {
+    // ✅ Support job seeker + recruiter flows
+    const resume: string =
+      body.resume || body.resumeText || "";
+
+    const jd: string | undefined = body.jd;
+
+    if (!resume) {
       return NextResponse.json(
-        { error: "Missing resume or job description" },
+        { error: "Missing resume text" },
         { status: 400 }
       );
     }
+
+    // ==========================
+    // JOB SEEKER FLOW (NO JD)
+    // ==========================
+    if (!jd) {
+      const improved = await rewriteResume(resume);
+
+      return NextResponse.json({
+        beforeScore: null,
+        afterScore: null,
+        attempts: 1,
+        text: improved,
+      });
+    }
+
+    // ==========================
+    // RECRUITER FLOW (WITH JD)
+    // ==========================
 
     // 1. Score original resume
     const originalScore = await getScore(resume, jd);
@@ -78,13 +111,9 @@ export async function POST(req: Request) {
     while (currentScore < 80 && attempts < 5) {
       attempts++;
 
-      // rewrite resume
       const rewritten = await rewriteResume(currentResume, jd);
-
-      // re-score rewritten resume
       const newScore = await getScore(rewritten, jd);
 
-      // update working copy
       currentResume = rewritten;
       currentScore = newScore;
     }
@@ -97,6 +126,8 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     console.error("Boost-to-80 error:", err);
+
+    // ✅ Always valid JSON
     return NextResponse.json(
       { error: "AI resume improvement failed" },
       { status: 500 }

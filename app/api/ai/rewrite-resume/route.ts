@@ -5,15 +5,23 @@ const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: Request) {
   try {
-    const { resume, jd } = await req.json();
-    if (!resume || !jd) {
+    const body = await req.json();
+
+    // ✅ Support BOTH recruiter + job seeker payloads
+    const resume: string =
+      body.resume || body.resumeText || "";
+
+    const jd: string | undefined = body.jd;
+
+    if (!resume) {
       return NextResponse.json(
-        { error: "Missing resume or job description" },
+        { error: "Missing resume text" },
         { status: 400 }
       );
     }
 
-    const prompt = `
+    const prompt = jd
+      ? `
 You are an expert resume optimizer.
 
 Rewrite the following resume so that it is highly aligned with the job description.
@@ -27,6 +35,18 @@ ORIGINAL RESUME:
 ${resume}
 
 Now produce the rewritten resume below:
+`
+      : `
+You are an expert resume optimizer.
+
+Rewrite the following resume to improve clarity, impact, ATS compliance,
+and overall strength.
+Keep it professional and factual — do NOT invent experience.
+
+ORIGINAL RESUME:
+${resume}
+
+Now produce the improved resume below:
 `;
 
     const completion = await client.chat.completions.create({
@@ -34,11 +54,18 @@ Now produce the rewritten resume below:
       messages: [{ role: "user", content: prompt }],
     });
 
-    const text = completion.choices[0].message?.content || "";
+    const text =
+      completion.choices?.[0]?.message?.content ?? "";
 
+    // ✅ ALWAYS return valid JSON
     return NextResponse.json({ text });
   } catch (err) {
     console.error("rewrite-resume error:", err);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+
+    // ✅ NEVER return empty response
+    return NextResponse.json(
+      { error: "Rewrite failed" },
+      { status: 500 }
+    );
   }
 }
