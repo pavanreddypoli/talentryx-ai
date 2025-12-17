@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY!,
+});
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    // ✅ Support BOTH recruiter + job seeker payloads
     const resume: string =
       body.resume || body.resumeText || "";
 
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
 
     if (!resume) {
       return NextResponse.json(
-        { error: "Missing resume text" },
+        { error: "Missing resume text", text: "" },
         { status: 400 }
       );
     }
@@ -39,14 +40,13 @@ Now produce the rewritten resume below:
       : `
 You are an expert resume optimizer.
 
-Rewrite the following resume to improve clarity, impact, ATS compliance,
-and overall strength.
-Keep it professional and factual — do NOT invent experience.
+Rewrite the resume to improve clarity, impact, ATS compliance, and keyword usage.
+Do NOT invent experience.
 
-ORIGINAL RESUME:
+RESUME:
 ${resume}
 
-Now produce the improved resume below:
+Return the rewritten resume below:
 `;
 
     const completion = await client.chat.completions.create({
@@ -55,16 +55,21 @@ Now produce the improved resume below:
     });
 
     const text =
-      completion.choices?.[0]?.message?.content ?? "";
+      completion?.choices?.[0]?.message?.content?.trim() || "";
 
-    // ✅ ALWAYS return valid JSON
-    return NextResponse.json({ text });
+    // ✅ ALWAYS RETURN JSON
+    return NextResponse.json({
+      text,
+    });
   } catch (err) {
     console.error("rewrite-resume error:", err);
 
-    // ✅ NEVER return empty response
+    // ✅ GUARANTEED JSON
     return NextResponse.json(
-      { error: "Rewrite failed" },
+      {
+        error: "Rewrite failed",
+        text: "",
+      },
       { status: 500 }
     );
   }

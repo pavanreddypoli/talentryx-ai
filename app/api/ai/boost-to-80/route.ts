@@ -12,7 +12,7 @@ You are an ATS scoring engine used by recruiters.
 
 Score the candidate resume against the job description.
 
-Return ONLY a number between 0 and 100. No words.
+Return ONLY a number between 0 and 100.
 
 Resume:
 ${resume}
@@ -27,15 +27,17 @@ ${jd}
     max_tokens: 5,
   });
 
-  const score = parseFloat(result.choices[0].message.content || "0");
+  const raw = result?.choices?.[0]?.message?.content || "0";
+  const score = parseFloat(raw);
+
   return isNaN(score) ? 0 : score;
 }
 
-// === REWRITE PROMPT ===
+// === REWRITE ===
 async function rewriteResume(resume: string, jd?: string): Promise<string> {
-  const rewritePrompt = jd
+  const prompt = jd
     ? `
-Rewrite this resume so that it better matches the job description.
+Rewrite this resume so it matches the job description.
 Keep it truthful, concise, ATS friendly, and achievement-driven.
 
 Resume:
@@ -47,8 +49,8 @@ ${jd}
 Return only the rewritten resume text.
 `
     : `
-Rewrite this resume to improve clarity, impact, and ATS friendliness.
-Keep it truthful, concise, and achievement-driven.
+Rewrite this resume to improve clarity, ATS alignment, and impact.
+Keep it truthful.
 
 Resume:
 ${resume}
@@ -58,18 +60,17 @@ Return only the rewritten resume text.
 
   const result = await openai.chat.completions.create({
     model: "gpt-4.1-mini",
-    messages: [{ role: "user", content: rewritePrompt }],
+    messages: [{ role: "user", content: prompt }],
     max_tokens: 1500,
   });
 
-  return result.choices[0].message.content || resume;
+  return result?.choices?.[0]?.message?.content || resume;
 }
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    // ✅ Support job seeker + recruiter flows
     const resume: string =
       body.resume || body.resumeText || "";
 
@@ -77,14 +78,14 @@ export async function POST(req: Request) {
 
     if (!resume) {
       return NextResponse.json(
-        { error: "Missing resume text" },
+        { error: "Missing resume text", text: "" },
         { status: 400 }
       );
     }
 
-    // ==========================
-    // JOB SEEKER FLOW (NO JD)
-    // ==========================
+    // ======================
+    // JOB SEEKER MODE
+    // ======================
     if (!jd) {
       const improved = await rewriteResume(resume);
 
@@ -96,26 +97,19 @@ export async function POST(req: Request) {
       });
     }
 
-    // ==========================
-    // RECRUITER FLOW (WITH JD)
-    // ==========================
-
-    // 1. Score original resume
+    // ======================
+    // RECRUITER MODE
+    // ======================
     const originalScore = await getScore(resume, jd);
 
     let currentResume = resume;
     let currentScore = originalScore;
     let attempts = 0;
 
-    // 2. Improve until score >= 80 OR 5 attempts
     while (currentScore < 80 && attempts < 5) {
       attempts++;
-
-      const rewritten = await rewriteResume(currentResume, jd);
-      const newScore = await getScore(rewritten, jd);
-
-      currentResume = rewritten;
-      currentScore = newScore;
+      currentResume = await rewriteResume(currentResume, jd);
+      currentScore = await getScore(currentResume, jd);
     }
 
     return NextResponse.json({
@@ -125,11 +119,17 @@ export async function POST(req: Request) {
       text: currentResume,
     });
   } catch (err) {
-    console.error("Boost-to-80 error:", err);
+    console.error("boost-to-80 error:", err);
 
-    // ✅ Always valid JSON
+    // ✅ GUARANTEED JSON
     return NextResponse.json(
-      { error: "AI resume improvement failed" },
+      {
+        error: "Boost failed",
+        beforeScore: null,
+        afterScore: null,
+        attempts: 0,
+        text: "",
+      },
       { status: 500 }
     );
   }
