@@ -52,7 +52,6 @@ export default function DashboardClient() {
   const [success, setSuccess] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  // ✅ NEW: AI action modal state
   const [aiOpen, setAiOpen] = useState(false);
   const [aiTitle, setAiTitle] = useState("");
   const [aiContent, setAiContent] = useState("");
@@ -65,7 +64,7 @@ export default function DashboardClient() {
     onDrop,
     accept: {
       "application/pdf": [],
-      "application/msword": [], // <-- DOC (legacy Word)
+      "application/msword": [],
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
         [],
     },
@@ -111,7 +110,6 @@ export default function DashboardClient() {
     }
   }
 
-  // ✅ NEW: helper to open modal
   function openAiModal(title: string) {
     setAiTitle(title);
     setAiContent("");
@@ -119,7 +117,9 @@ export default function DashboardClient() {
     setAiOpen(true);
   }
 
-  // ✅ NEW: Rewrite with AI
+  // =========================
+  // 🔧 FIXED: Rewrite with AI
+  // =========================
   async function handleRewrite(r: any) {
     if (!jobDescription?.trim()) {
       alert("Please paste a job description first.");
@@ -136,20 +136,25 @@ export default function DashboardClient() {
     setAiWorking(true);
 
     try {
-      const res = await fetch("/api/jobseeker/rewrite", {
+      const res = await fetch("/api/ai/rewrite-resume", { // 🔧 FIX
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          jobDescription,
           resumeText,
-          candidateName: r?.candidate_name || r?.file_name || "Resume",
+          jd: jobDescription,
         }),
       });
 
-      const data = await res.json();
+      let data: any;
+      try {
+        data = await res.json(); // 🔧 FIX (guarded)
+      } catch {
+        throw new Error("AI service returned empty response");
+      }
+
       if (!res.ok) throw new Error(data?.error || "Rewrite failed");
 
-      setAiContent(data?.content || "");
+      setAiContent(data?.text || "");
     } catch (e: any) {
       setAiError(e?.message || "Rewrite failed.");
     } finally {
@@ -157,7 +162,9 @@ export default function DashboardClient() {
     }
   }
 
-  // ✅ NEW: Boost to 80+
+  // =========================
+  // 🔧 FIXED: Boost to 80+
+  // =========================
   async function handleBoost(r: any) {
     if (!jobDescription?.trim()) {
       alert("Please paste a job description first.");
@@ -174,22 +181,25 @@ export default function DashboardClient() {
     setAiWorking(true);
 
     try {
-      const res = await fetch("/api/jobseeker/boost", {
+      const res = await fetch("/api/ai/boost-to-80", { // 🔧 FIX
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          jobDescription,
           resumeText,
-          currentScore: r?.score ?? 0,
-          missingKeywords: r?.missing_keywords ?? [],
-          candidateName: r?.candidate_name || r?.file_name || "Resume",
+          jd: jobDescription,
         }),
       });
 
-      const data = await res.json();
+      let data: any;
+      try {
+        data = await res.json(); // 🔧 FIX (guarded)
+      } catch {
+        throw new Error("AI service returned empty response");
+      }
+
       if (!res.ok) throw new Error(data?.error || "Boost failed");
 
-      setAiContent(data?.content || "");
+      setAiContent(data?.text || "");
     } catch (e: any) {
       setAiError(e?.message || "Boost failed.");
     } finally {
