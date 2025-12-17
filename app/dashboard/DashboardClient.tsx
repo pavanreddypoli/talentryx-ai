@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import { Upload, Sparkles, Loader2 } from "lucide-react";
+import { Upload, Sparkles, Loader2, X } from "lucide-react";
 
 /* -----------------------------
    Score badge logic
@@ -51,6 +51,13 @@ export default function DashboardClient() {
   const [results, setResults] = useState<any[]>([]);
   const [success, setSuccess] = useState(false);
   const [progress, setProgress] = useState(0);
+
+  // ✅ NEW: AI action modal state
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiTitle, setAiTitle] = useState("");
+  const [aiContent, setAiContent] = useState("");
+  const [aiWorking, setAiWorking] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   const onDrop = (accepted: File[]) => setFiles(accepted);
 
@@ -104,9 +111,161 @@ export default function DashboardClient() {
     }
   }
 
+  // ✅ NEW: helper to open modal
+  function openAiModal(title: string) {
+    setAiTitle(title);
+    setAiContent("");
+    setAiError(null);
+    setAiOpen(true);
+  }
+
+  // ✅ NEW: Rewrite with AI
+  async function handleRewrite(r: any) {
+    if (!jobDescription?.trim()) {
+      alert("Please paste a job description first.");
+      return;
+    }
+
+    const resumeText = (r?.full_text || r?.snippet || "").toString().trim();
+    if (!resumeText) {
+      alert("Could not find resume text for this entry. Please re-run analysis.");
+      return;
+    }
+
+    openAiModal("Rewrite with AI");
+    setAiWorking(true);
+
+    try {
+      const res = await fetch("/api/jobseeker/rewrite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jobDescription,
+          resumeText,
+          candidateName: r?.candidate_name || r?.file_name || "Resume",
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Rewrite failed");
+
+      setAiContent(data?.content || "");
+    } catch (e: any) {
+      setAiError(e?.message || "Rewrite failed.");
+    } finally {
+      setAiWorking(false);
+    }
+  }
+
+  // ✅ NEW: Boost to 80+
+  async function handleBoost(r: any) {
+    if (!jobDescription?.trim()) {
+      alert("Please paste a job description first.");
+      return;
+    }
+
+    const resumeText = (r?.full_text || r?.snippet || "").toString().trim();
+    if (!resumeText) {
+      alert("Could not find resume text for this entry. Please re-run analysis.");
+      return;
+    }
+
+    openAiModal("Boost to 80+");
+    setAiWorking(true);
+
+    try {
+      const res = await fetch("/api/jobseeker/boost", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jobDescription,
+          resumeText,
+          currentScore: r?.score ?? 0,
+          missingKeywords: r?.missing_keywords ?? [],
+          candidateName: r?.candidate_name || r?.file_name || "Resume",
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Boost failed");
+
+      setAiContent(data?.content || "");
+    } catch (e: any) {
+      setAiError(e?.message || "Boost failed.");
+    } finally {
+      setAiWorking(false);
+    }
+  }
+
   return (
     <>
       <SparkleSuccess trigger={success} />
+
+      {/* ✅ NEW: AI RESULT MODAL (simple + safe, no extra deps) */}
+      {aiOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-3xl rounded-2xl bg-white shadow-xl border">
+            <div className="flex items-center justify-between px-5 py-4 border-b">
+              <div>
+                <div className="text-sm text-slate-500">Talentryx AI</div>
+                <div className="text-lg font-semibold">{aiTitle}</div>
+              </div>
+              <button
+                onClick={() => setAiOpen(false)}
+                className="rounded-md p-2 hover:bg-slate-100"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="px-5 py-4">
+              {aiWorking && (
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generating…
+                </div>
+              )}
+
+              {aiError && (
+                <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {aiError}
+                </div>
+              )}
+
+              {!aiWorking && !aiError && aiContent && (
+                <pre className="mt-3 whitespace-pre-wrap break-words text-sm text-slate-800">
+                  {aiContent}
+                </pre>
+              )}
+
+              {!aiWorking && !aiError && !aiContent && (
+                <div className="mt-3 text-sm text-slate-500">
+                  Output will appear here.
+                </div>
+              )}
+            </div>
+
+            <div className="px-5 py-4 border-t flex items-center justify-end gap-2">
+              <Button variant="outline" onClick={() => setAiOpen(false)}>
+                Close
+              </Button>
+              <Button
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(aiContent || "");
+                  } catch {
+                    // ignore
+                  }
+                }}
+                className="bg-indigo-600 hover:bg-indigo-700"
+              >
+                Copy
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <header className="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg shadow">
         <div className="px-6 py-4 flex justify-between">
@@ -192,12 +351,8 @@ export default function DashboardClient() {
                     <TableHead className="w-[14%]">Resume</TableHead>
                     <TableHead className="w-[32%]">Strengths</TableHead>
                     <TableHead className="w-[32%]">Gaps</TableHead>
-                    <TableHead className="w-[8%] text-center">
-                      Score
-                    </TableHead>
-                    <TableHead className="w-[14%] text-right">
-                      Actions
-                    </TableHead>
+                    <TableHead className="w-[8%] text-center">Score</TableHead>
+                    <TableHead className="w-[14%] text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
 
@@ -209,7 +364,7 @@ export default function DashboardClient() {
                     return (
                       <TableRow key={i} className="align-top">
                         <TableCell className="font-medium">
-                          {r.candidate_name}
+                          {r.candidate_name || r.file_name || "Resume"}
                         </TableCell>
 
                         <TableCell className="whitespace-normal break-words">
@@ -238,12 +393,20 @@ export default function DashboardClient() {
 
                         <TableCell className="text-right align-top">
                           <div className="flex gap-2 justify-end">
-                            <Button size="sm" variant="outline">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleRewrite(r)}
+                              disabled={aiWorking}
+                            >
                               Rewrite with AI
                             </Button>
+
                             <Button
                               size="sm"
                               className="bg-green-600 hover:bg-green-700 text-white"
+                              onClick={() => handleBoost(r)}
+                              disabled={aiWorking}
                             >
                               Boost to 80+
                             </Button>
