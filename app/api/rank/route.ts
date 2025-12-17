@@ -213,13 +213,11 @@ export async function POST(req: Request) {
     for (const file of files) {
       const buffer = Buffer.from(await file.arrayBuffer());
 
-      // ✅ ALWAYS HAVE A NAME
       const candidateName =
         file.name?.replace(/\.(pdf|docx|doc)$/i, "") || "Resume";
 
       let text = "";
 
-      // ✅ SAFE EXTRACTION (PDF FAILURE WILL NOT CRASH)
       try {
         if (file.name.toLowerCase().endsWith(".pdf")) {
           text = await extractPdfText(buffer);
@@ -240,9 +238,19 @@ export async function POST(req: Request) {
       const { matched, missing, matchPercent, score } = computeMatch(keywords, text);
       const { strengths, gaps } = makeInsights(candidateName, matchPercent, matched, missing);
 
+      // ======================================================
+      // ✅ ADDED FOR JOB SEEKER AI ACTIONS (ONLY ADDITION)
+      // ======================================================
+      const snippet = text.slice(0, 400);
+
       results.push({
-        candidate_name: candidateName, // ✅ FIXED
+        candidate_name: candidateName,
         file_name: file.name,
+
+        // ✅ REQUIRED by Rewrite with AI / Boost to 80+
+        full_text: text,
+        snippet,
+
         score,
         keyword_match_percent: matchPercent,
         strengths,
