@@ -6,6 +6,35 @@ Discovered: 2026-05-01 via static analysis of app/api/, lib/, and app/.
 
 ## ✅ Resolved — 2026-05-06
 
+### Finding C — Login redirect loop (Supabase browser/server client library mismatch)
+
+**Found:** 2026-05-06 during manual browser test of Finding B fix. After the RLS policy was applied and verified in psql, logging in as `pavankumarreddy.poli@gmail.com` produced an infinite redirect loop between `/login` and `/dashboard`.
+
+**Root cause:** The codebase simultaneously used two incompatible Supabase client libraries:
+- `@supabase/auth-helpers-nextjs@^0.15.0` — imported by `lib/supabaseClient.ts` (browser/login client)
+- `@supabase/ssr@^0.8.0` — imported by `lib/supabaseServer.ts` (server component client)
+
+These two libraries use different session cookie storage schemes. `auth-helpers-nextjs` writes `sb-access-token` / `sb-refresh-token` cookies on sign-in. `@supabase/ssr`'s `createServerClient` reads a `sb-[project-ref]-auth-token` cookie. Because the server client couldn't find its expected cookie format, `supabase.auth.getUser()` returned `null` in `dashboard/layout.tsx` on every request, triggering `redirect("/login")` immediately — before the PostgREST query even ran.
+
+**Why earlier tests didn't catch it:** Before Finding B was diagnosed and the RLS policy was applied, every visit to `/dashboard` failed at the PostgREST layer (0 rows, PGRST116). The library mismatch was masked by the RLS deny-all: both problems redirected to `/login`, but the RLS error appeared first in the logs and was the visible symptom.
+
+**Loop sequence:**
+```
+1. /login page renders → useEffect: browser client (auth-helpers) sees session → router.push("/after-login")
+2. /after-login → sync-user → /api/me (no header → 401) → router.push("/dashboard")
+3. dashboard/layout.tsx → supabaseServer (ssr) cannot read session cookie → authData.user = null → redirect("/login")
+4. Back to step 1 → infinite loop
+```
+
+**Fix applied (2026-05-06):**
+- `lib/supabaseClient.ts` — changed import from `@supabase/auth-helpers-nextjs` to `@supabase/ssr`. `createBrowserClient` has identical signature (arity 3: `url, key, options?`) in both packages.
+- Removed `@supabase/auth-helpers-nextjs` and `@supabase/auth-helpers-react` from `package.json` entirely — no other file in the codebase imported from either package.
+- Ran `npm install` and `npm run build` — clean build, zero errors.
+
+**Verified:** Login flow reaches `/dashboard` without redirect loop. No PGRST116, no `Failed to load user role` errors.
+
+---
+
 ### R1 — `external_user_id` column missing from `users` table
 
 **Found:** First `npm run dev` run against the restored DB returned `PGRST204 — Could not find the 'external_user_id' column of 'users' in the schema cache` on every `POST /api/sync-user` call, blocking all new user creation and first-time login.
@@ -241,3 +270,15 @@ The codebase maintains two separate user-identity tables: `public.users` stores 
 - [lib/supabaseAdmin.ts](../lib/supabaseAdmin.ts), [lib/supabaseServer.ts](../lib/supabaseServer.ts)
 
 **Recommended fix:** Add an `auth_user_id UUID REFERENCES auth.users(id)` column to `public.users`, populate it during the Supabase Auth sign-up callback, and use it to join the two tables when billing + role state are both needed.
+
+---
+
+## UI-1 — "Job Seeker Dashboard" label shown in recruiter dashboard header (low priority)
+
+**Discovered:** 2026-05-06 during manual browser test confirming Finding C fix.
+
+**Symptom:** The top-right header area of the recruiter dashboard at `/dashboard` displays the label "Job Seeker Dashboard". The sidebar correctly shows "Recruiter Intelligence Platform". The two labels are inconsistent.
+
+**Affected file:** Likely a hardcoded string in the recruiter dashboard page or its header component — not yet traced to a specific file.
+
+**Priority:** Low. Cosmetic only — no functional impact, no data exposure, no broken routing. Fix during a UI polish pass.
