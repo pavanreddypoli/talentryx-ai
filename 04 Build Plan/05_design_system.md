@@ -1,7 +1,7 @@
 # Design System — Extracted from Landing Page
 
 Source: `app/page.tsx` (commit `36c184f`)
-Status: **Proposal — awaiting approval before implementation**
+Status: **Approved — ready for implementation (with modifications from review)**
 
 ---
 
@@ -190,20 +190,13 @@ theme: {
 
 **Why not `globals.css` for these:** Color tokens as CSS variables are fine at runtime but don't generate utility classes automatically in Tailwind v4's setup. Keeping them in `tailwind.config.ts` lets you write `bg-brand-navy` and have IDE autocomplete.
 
-### 2.2 `app/globals.css` — complex backgrounds + grain overlay + `--primary` update
+### 2.2 `app/globals.css` — complex backgrounds + grain overlay
 
-**Why here:** The radial gradient mesh and grain overlay background patterns are too complex for Tailwind utilities. They also need to be usable as CSS class names. CSS custom properties are also the right layer for runtime values that change between themes.
+**Why here:** The radial gradient mesh and grain overlay background patterns are too complex for Tailwind utilities. They also need to be usable as CSS class names.
 
 **What goes here:**
 
 ```css
-/* Update --primary to match landing's brand navy */
-:root {
-  --primary: #0a0e27;  /* replace oklch value */
-  --primary-foreground: #ffffff;
-  --radius: 1rem;  /* bump from 0.625rem to match rounded-2xl dominance */
-}
-
 /* Reusable mesh backgrounds */
 .bg-hero-mesh { background-image: radial-gradient(...navy palette...); }
 .bg-seekers-mesh { background-image: radial-gradient(...amber/violet...); }
@@ -216,6 +209,8 @@ theme: {
 ```
 
 Move the inline `<style>` block currently in `page.tsx` into `globals.css`. It's global by nature (keyframes and class names), not scoped to the page.
+
+**Out of scope (review modification):** Do NOT change `--primary` or `--radius` in `:root`. `--primary` (currently OKLCH dark navy) is consumed by every shadcn component's `default` variant — changing it would silently repaint every Button, Badge, and Input across the dashboard. The new `brand-primary` / `brand-ghost` / `brand-dark` variants in `button.tsx` are sufficient for landing page work without touching the shared token. `--radius` (currently `0.625rem`) is similarly global; `card.tsx` will be updated explicitly instead.
 
 ### 2.3 `components/ui/` — button and card variants
 
@@ -243,6 +238,7 @@ Move the inline `<style>` block currently in `page.tsx` into `globals.css`. It's
 - `shadow-sm` is too subtle — landing uses `shadow-lg hover:shadow-xl` progression
 - Missing: glass-dark variant for job-seeker dark-background sections
 - Update: bump base radius to `rounded-2xl`, add optional `variant="glass-dark"` and `variant="light-gradient"` props
+- **⚠ Global impact:** The base `rounded-xl → rounded-2xl` change is NOT landing-page-specific — it affects every existing `<Card>` across the entire app (dashboard, history page, any other consumers). Audit all Card usages before and after this step and verify the dashboard renders correctly.
 
 **`components/ui/dialog.tsx`** — minor radius update
 - `DialogContent` uses `rounded-lg` — should be `rounded-2xl` for visual consistency with card language
@@ -280,26 +276,29 @@ Move the inline `<style>` block currently in `page.tsx` into `globals.css`. It's
 
 ```
 tailwind.config.ts          ← brand color tokens, font-display, animation utilities, shadow tokens
-app/globals.css             ← CSS vars update (--primary, --radius), mesh bg classes, grain-overlay
+app/globals.css             ← mesh bg classes, grain-overlay (NO --primary or --radius changes)
 components/ui/button.tsx    ← add brand-primary, brand-ghost, brand-dark variants
-components/ui/card.tsx      ← bump to rounded-2xl, add glass-dark + light-gradient variants
+components/ui/card.tsx      ← bump to rounded-2xl [global], add glass-dark + light-gradient variants
 components/ui/dialog.tsx    ← rounded-lg → rounded-2xl in DialogContent
 components/ui/alert.tsx     ← add brand amber variant
 ```
 
-No new files needed. No changes to any page, API route, or layout.
+No new files needed. No changes to any API route or layout.
 
 ---
 
 ## 5. Implementation Order (for follow-up task)
 
 1. `tailwind.config.ts` — tokens first; everything else depends on them
-2. `app/globals.css` — move `<style>` block from page.tsx, update `--primary` and `--radius`, add mesh classes
-3. `app/page.tsx` — remove inline `<style>` block (now in globals.css); replace hardcoded `#0a0e27` with `bg-brand-navy`; replace `[0_8px_32px_rgba...]` with `shadow-cta`
+2. `app/globals.css` — add mesh background classes and grain-overlay class (NO `--primary` or `--radius` changes)
+3a. `app/page.tsx` — move inline `<style>` block verbatim into `globals.css`; no class name changes in JSX (mechanical move only, landing page must render identically)
+3b. `app/page.tsx` — replace hardcoded values with new tokens (`bg-[#0a0e27]` → `bg-brand-navy`, `shadow-[0_8px_32px_rgba...]` → `shadow-cta`, etc.)
 4. `components/ui/button.tsx` — add variants
-5. `components/ui/card.tsx` — add variants + radius
+5. `components/ui/card.tsx` — add variants + radius bump (⚠ verify dashboard after this commit)
 6. `components/ui/dialog.tsx` — radius bump
 7. `components/ui/alert.tsx` — brand variant
 8. Visual smoke test: landing page, login, dashboard — confirm nothing regressed
 
-Total estimated diff: ~120 lines across 7 files. All changes are additive (new variants, new tokens) except the `<style>` block move and two one-line radius changes.
+Each step is its own commit. Browser-verify landing page after steps 1, 3a, 3b, and 5 at minimum.
+
+Total estimated diff: ~120 lines across 7 files. All changes are additive (new variants, new tokens) except the `<style>` block move (step 3a) and two one-line radius changes (steps 5, 6).
