@@ -43,21 +43,21 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-indigo-600 to-indigo-900">
-      <div className="w-full max-w-sm bg-white rounded-xl shadow-xl p-8">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-brand-navy bg-hero-mesh">
+      <div className="w-full max-w-sm bg-white/5 border border-white/10 backdrop-blur-sm rounded-2xl p-8 shadow-card animate-fade-up">
 
         <div className="text-center mb-6">
-          <h1 className="text-xl font-bold flex justify-center items-center gap-2 text-indigo-700">
-            <Sparkles className="h-5 w-5 text-yellow-400" />
+          <h1 className="text-xl font-display font-bold flex justify-center items-center gap-2 text-white">
+            <Sparkles className="h-5 w-5 text-brand-amber" />
             Talentryx AI
           </h1>
-          <p className="text-slate-500 text-sm mt-1">
+          <p className="text-white/60 text-sm mt-1">
             Create a new account
           </p>
         </div>
 
         <form onSubmit={handleSignup} className="space-y-4">
-          {error && <p className="text-red-600 text-sm text-center">{error}</p>}
+          {error && <p className="text-red-300 text-sm text-center">{error}</p>}
 
           <Input
             type="email"
@@ -65,6 +65,7 @@ export default function SignupPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
           />
 
           <Input
@@ -73,45 +74,53 @@ export default function SignupPage() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
           />
 
-          {/* 🔑 ROLE SELECTION */}
+          {/* 🔑 ROLE SELECTION — segmented control */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">
+            <label className="text-sm font-medium text-white/70">
               I am signing up as
             </label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  checked={role === "recruiter"}
-                  onChange={() => setRole("recruiter")}
-                />
+            <div className="flex gap-1 p-1 bg-white/5 border border-white/10 rounded-full">
+              <button
+                type="button"
+                onClick={() => setRole("recruiter")}
+                className={`flex-1 rounded-full px-4 py-1.5 text-sm transition-all ${
+                  role === "recruiter"
+                    ? "bg-brand-amber text-brand-navy font-semibold"
+                    : "bg-white/5 border border-white/20 text-white/70 hover:bg-white/10"
+                }`}
+              >
                 Recruiter
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  checked={role === "job_seeker"}
-                  onChange={() => setRole("job_seeker")}
-                />
+              </button>
+              <button
+                type="button"
+                onClick={() => setRole("job_seeker")}
+                className={`flex-1 rounded-full px-4 py-1.5 text-sm transition-all ${
+                  role === "job_seeker"
+                    ? "bg-brand-amber text-brand-navy font-semibold"
+                    : "bg-white/5 border border-white/20 text-white/70 hover:bg-white/10"
+                }`}
+              >
                 Job Seeker
-              </label>
+              </button>
             </div>
           </div>
 
           <Button
             type="submit"
+            variant="brand-primary"
             disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+            className="w-full"
           >
             {loading ? "Creating…" : "Sign Up"}
           </Button>
         </form>
 
-        <p className="text-center text-sm mt-4">
+        <p className="text-center text-sm mt-4 text-white/60">
           Already have an account?{" "}
-          <Link href="/login" className="text-indigo-600 font-medium">
+          <Link href="/login" className="text-brand-amber font-medium hover:text-brand-amber-light">
             Log In
           </Link>
         </p>
