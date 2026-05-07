@@ -275,16 +275,32 @@ The 5 unsynced auth users are a separate problem (Issue 3 downstream effect) and
 
 ---
 
+## ✅ Resolved — 2026-05-07
+
 ## Issue 2 — `/api/rank` never persists to `ranking_sessions` (history always empty)
 
-The history pages at `/dashboard/history` and `/dashboard/history/[sessionId]` read from `ranking_sessions` and `ranking_results`, but the ranking route `/api/rank` performs all scoring in memory and returns results directly to the client without writing to either table. Every user's history will be empty regardless of how many ranking runs they perform.
+**Fix applied (2026-05-07):**
 
-**Affected files:**
-- [app/api/rank/route.ts](../app/api/rank/route.ts) — does not insert into Supabase
-- [app/dashboard/history/page.tsx](../app/dashboard/history/page.tsx) — reads `ranking_sessions`
-- [app/dashboard/history/[sessionId]/page.tsx](../app/dashboard/history/%5BsessionId%5D/page.tsx) — reads `ranking_sessions` and `ranking_results`
+- `app/api/rank/route.ts` — after scoring and sorting, added a best-effort persistence block (wrapped in `try/catch`) that:
+  1. INSERTs one row into `ranking_sessions` (`user_id = session.user.id`, `job_description`, `created_at`)
+  2. On success, INSERTs one row per candidate into `ranking_results` with all columns: `candidate_name`, `file_name`, `snippet`, `score`, `keyword_match_percent`, `matched_keywords`, `missing_keywords`, `summary` (= `strengths` array), `full_text`, `storage_path` (null — files are in-memory only), `created_at`
+  - Uses `supabaseServer` (authenticated role) so RLS scopes data to the session owner
+  - A DB failure logs an error and is swallowed — it never breaks the response
 
-**Recommended fix:** At the end of the `/api/rank` POST handler, after computing results, insert one row into `ranking_sessions` (using `supabaseAdmin` or the authenticated server client) and one row per candidate into `ranking_results`, then return the existing results payload unchanged.
+- `supabase/migrations/0004_add_rls_policies_ranking_tables.sql` — both tables had `rowsecurity = true` with zero policies (same deny-all pattern as `public.users` before Finding B). Added SELECT + INSERT policies for `authenticated` on both tables, plus service_role pass-through. Applied 2026-05-07.
+
+- `results.push()` in the per-file loop now includes `matched_keywords`, `missing_keywords`, `summary` alongside the existing fields, making the full dataset available in both the API response and the DB row.
+
+**Verified (2026-05-07):**
+- `POST /api/rank` → 200, no persistence errors in logs
+- `ranking_sessions` row created: `id = 6c5a5833-0fa9-4997-b38a-564dc42edc31`, `user_id = e44fa35d-...`, correct `job_description`, `created_at` set
+- `ranking_results` row: all columns populated — `matched_keywords` (27-item array), `missing_keywords` (populated), `summary` (3-item strengths array), `full_text` (full resume text), `snippet` (400-char excerpt). `storage_path` null as expected.
+- `GET /dashboard/history` → 200, session visible in list
+- `GET /dashboard/history/6c5a5833-...` → 200, candidate row rendered with score and snippet
+
+**Scope note:** Verified via single-resume flow only. Bulk recruiter workflow (Issue 5) not yet built; multi-candidate testing deferred to Phase 1.
+
+**Side finding noted during verification:** `app/api/rank/route.ts` uses `supabase.auth.getSession()` to read `session.user.id` for the `user_id` insert. Supabase logs a security warning recommending `getUser()` (which validates with the auth server) over `getSession()` (which reads from cookie storage without validation). The existing authentication check is not broken — the warning is pre-existing and not introduced by this fix — but should be addressed in a future hardening pass.
 
 ---
 

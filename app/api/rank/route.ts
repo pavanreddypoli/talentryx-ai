@@ -253,12 +253,58 @@ export async function POST(req: Request) {
 
         score,
         keyword_match_percent: matchPercent,
+        matched_keywords: matched,
+        missing_keywords: missing,
+        summary: strengths,
         strengths,
         gaps,
       });
     }
 
     results.sort((a, b) => b.score - a.score);
+
+    // Best-effort persistence — a DB failure logs an error but never
+    // breaks the response the caller already received.
+    try {
+      const { data: sessionRow, error: sessionErr } = await supabase
+        .from("ranking_sessions")
+        .insert({
+          user_id: session.user.id,
+          job_description: jobDescription,
+          created_at: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
+
+      if (sessionErr || !sessionRow) {
+        console.error("Failed to create ranking session:", sessionErr);
+      } else {
+        const resultRows = results.map((r) => ({
+          session_id: sessionRow.id,
+          candidate_name: r.candidate_name,
+          file_name: r.file_name,
+          snippet: r.snippet,
+          score: r.score,
+          keyword_match_percent: r.keyword_match_percent,
+          matched_keywords: r.matched_keywords,
+          missing_keywords: r.missing_keywords,
+          summary: r.summary,
+          full_text: r.full_text,
+          storage_path: null,
+          created_at: new Date().toISOString(),
+        }));
+
+        const { error: resultsErr } = await supabase
+          .from("ranking_results")
+          .insert(resultRows);
+
+        if (resultsErr) {
+          console.error("Failed to persist ranking results:", resultsErr);
+        }
+      }
+    } catch (persistErr) {
+      console.error("Persistence error in /api/rank:", persistErr);
+    }
 
     return NextResponse.json({ results });
   } catch (err) {
