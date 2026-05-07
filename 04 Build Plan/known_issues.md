@@ -217,6 +217,35 @@ The 5 unsynced auth users are a separate problem (Issue 3 downstream effect) and
 
 ---
 
+## Issue 5 — Recruiter dashboard renders job-seeker UI (bulk recruiter workflow not implemented)
+
+**Discovered:** 2026-05-06 during manual verification of Issue 2 (history persistence).
+
+**Symptom:** The recruiter dashboard at `/dashboard` renders a single-resume "Your Resume Match Analysis" UI with one JD textarea and one resume upload zone. The sidebar correctly shows "Recruiter Intelligence Platform" and the URL is `/dashboard` (routing is correct), but the main content area is the job-seeker single-resume analyzer, not a bulk recruiter workflow. The hardcoded "Job Seeker Dashboard" label in the page header (tracked as UI-1) is actually accurate — the component is the same one rendered for job seekers.
+
+**Root cause confirmed via git history:**
+- `app/dashboard/DashboardClient.tsx` has been a single-resume analyzer since the initial commit (`202733b`). A bulk recruiter workflow was never built into this component.
+- `app/job-seeker/dashboard/page.tsx` previously had its own 145-line job-seeker-specific UI. On 2025-12-15, commit `26d80d5` ("made recruiter and job seeker pages identical") replaced it with a one-liner: `import DashboardClient from "@/app/dashboard/DashboardClient"`. This collapsed both roles to share the same component.
+- Both `/dashboard` and `/job-seeker/dashboard` now render `DashboardClient` — the recruiter view has no distinct bulk-ranking UI.
+
+**Scope:** Phase 1 product work, not a bug fix. Building the recruiter dashboard requires:
+- Multi-file drag-and-drop (bulk resume upload, 10–50 files)
+- Candidate table with bulk ranking results
+- Session naming / tagging
+- Possibly a dedicated `/api/rank/bulk` endpoint or reuse of the existing `/api/rank` with multi-file support (already present in the route)
+- Estimated effort: 4–8 hours of UI work
+
+**Why it blocks Issue 2 testing:** Issue 2 adds history persistence to the rank API. The intended verification path was: recruiter uploads 2–3 resumes → ranked results appear → history page shows the session. That path requires a recruiter-specific UI with multi-file upload. Since only the single-resume flow exists, Issue 2 can be partially verified (single-resume run → history entry appears) but the bulk-ranking use case cannot be tested until Issue 5 is addressed.
+
+**Affected files:**
+- [app/dashboard/DashboardClient.tsx](../app/dashboard/DashboardClient.tsx) — shared component; no recruiter-specific view
+- [app/dashboard/page.tsx](../app/dashboard/page.tsx) — renders `DashboardClient` directly
+- [app/job-seeker/dashboard/page.tsx](../app/job-seeker/dashboard/page.tsx) — re-exports `DashboardClient`
+
+**Do not fix in Phase 0.** Track for Phase 1 sprint planning.
+
+---
+
 ## Issue 4 — Orphaned `auth.users` rows with no `public.users` counterpart
 
 **Discovered:** 2026-05-06 during diagnosis of Finding B (RLS deny-all).
