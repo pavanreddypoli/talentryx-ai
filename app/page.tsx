@@ -53,15 +53,15 @@ export default function HomePage() {
   }, []);
 
   return (
-    <main className="min-h-screen flex flex-col bg-[#fafaf7] text-slate-900">
+    <main className="min-h-screen flex flex-col bg-brand-canvas text-slate-900">
       {/* ============================================================ */}
       {/* NAV                                                           */}
       {/* ============================================================ */}
-      <header className="sticky top-0 z-50 bg-[#0a0e27]/80 backdrop-blur-xl border-b border-white/5">
+      <header className="sticky top-0 z-50 bg-brand-navy/80 backdrop-blur-xl border-b border-white/5">
         <div className="mx-auto max-w-7xl flex items-center justify-between px-6 py-4 text-white">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="relative h-9 w-9 rounded-lg bg-gradient-to-br from-amber-300 to-amber-500 flex items-center justify-center shadow-[0_0_20px_rgba(251,191,36,0.4)] group-hover:shadow-[0_0_30px_rgba(251,191,36,0.6)] transition-shadow">
-              <Sparkles className="h-5 w-5 text-[#0a0e27]" strokeWidth={2.5} />
+            <div className="relative h-9 w-9 rounded-lg bg-gradient-to-br from-amber-300 to-amber-500 flex items-center justify-center shadow-logo group-hover:shadow-[0_0_30px_rgba(251,191,36,0.6)] transition-shadow">
+              <Sparkles className="h-5 w-5 text-brand-navy" strokeWidth={2.5} />
             </div>
             <span className={`${fraunces.className} font-semibold text-xl tracking-tight`}>
               Talentryx<span className="text-amber-400">.</span>
@@ -92,7 +92,7 @@ export default function HomePage() {
             </Link>
             <Link
               href="/signup"
-              className="group inline-flex items-center gap-1.5 rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-[#0a0e27] hover:bg-amber-300 transition-all shadow-[0_4px_24px_rgba(251,191,36,0.35)] hover:shadow-[0_6px_32px_rgba(251,191,36,0.5)]"
+              className="group inline-flex items-center gap-1.5 rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-brand-navy hover:bg-amber-300 transition-all shadow-cta-sm hover:shadow-[0_6px_32px_rgba(251,191,36,0.5)]"
             >
               Get started
               <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
@@ -109,14 +109,14 @@ export default function HomePage() {
         </div>
 
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-white/10 bg-[#0a0e27] px-6 py-4 text-white/80 space-y-3 text-sm">
+          <div className="md:hidden border-t border-white/10 bg-brand-navy px-6 py-4 text-white/80 space-y-3 text-sm">
             <a href="#how-it-works" onClick={() => setMobileMenuOpen(false)} className="block py-1">How it works</a>
             <a href="#recruiters" onClick={() => setMobileMenuOpen(false)} className="block py-1">For recruiters</a>
             <a href="#job-seekers" onClick={() => setMobileMenuOpen(false)} className="block py-1">For job seekers</a>
             <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="block py-1">Pricing</a>
             <div className="pt-3 border-t border-white/10 flex gap-3">
               <Link href="/login" className="flex-1 text-center py-2 rounded-md border border-white/20">Log in</Link>
-              <Link href="/signup" className="flex-1 text-center py-2 rounded-md bg-amber-400 text-[#0a0e27] font-semibold">Get started</Link>
+              <Link href="/signup" className="flex-1 text-center py-2 rounded-md bg-amber-400 text-brand-navy font-semibold">Get started</Link>
             </div>
           </div>
         )}
@@ -125,18 +125,9 @@ export default function HomePage() {
       {/* ============================================================ */}
       {/* HERO                                                          */}
       {/* ============================================================ */}
-      <section className="relative overflow-hidden bg-[#0a0e27] text-white">
+      <section className="relative overflow-hidden bg-brand-navy text-white">
         {/* Atmosphere: radial gradient mesh */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage: `
-              radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.25), transparent 50%),
-              radial-gradient(circle at 80% 70%, rgba(251, 191, 36, 0.15), transparent 50%),
-              radial-gradient(circle at 50% 100%, rgba(139, 92, 246, 0.2), transparent 60%)
-            `,
-          }}
-        />
+        <div className="absolute inset-0 bg-hero-mesh pointer-events-none" />
         <div className="absolute inset-0 grain-overlay opacity-30 pointer-events-none" />
 
         <div className="relative mx-auto max-w-7xl px-6 py-20 lg:py-28 grid gap-16 lg:grid-cols-[1.1fr_1fr] items-center">
@@ -177,7 +168,7 @@ export default function HomePage() {
             >
               <Link
                 href="/recruiter"
-                className="group inline-flex items-center justify-center gap-2 rounded-full bg-amber-400 px-7 py-3.5 text-sm font-semibold text-[#0a0e27] hover:bg-amber-300 transition-all shadow-[0_8px_32px_rgba(251,191,36,0.3)] hover:shadow-[0_12px_40px_rgba(251,191,36,0.45)]"
+                className="group inline-flex items-center justify-center gap-2 rounded-full bg-amber-400 px-7 py-3.5 text-sm font-semibold text-brand-navy hover:bg-amber-300 transition-all shadow-cta hover:shadow-cta-hover"
               >
                 <Building2 className="h-4 w-4" />
                 I&apos;m hiring
@@ -331,7 +322,7 @@ export default function HomePage() {
               {/* Card header */}
               <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
                 <div className="flex items-center gap-2">
-                  <div className="h-7 w-7 rounded-full bg-gradient-to-br from-amber-300 to-amber-500 flex items-center justify-center text-[10px] font-bold text-[#0a0e27]">
+                  <div className="h-7 w-7 rounded-full bg-gradient-to-br from-amber-300 to-amber-500 flex items-center justify-center text-[10px] font-bold text-brand-navy">
                     Y
                   </div>
                   <div>
@@ -424,14 +415,14 @@ export default function HomePage() {
                   <Wand2 className="h-3 w-3 text-violet-500" />
                   <span className="font-medium">Rewrite with AI</span>
                 </div>
-                <div className="flex items-center gap-1 text-[10px] font-bold text-[#0a0e27] bg-amber-400 rounded-full px-2.5 py-1">
+                <div className="flex items-center gap-1 text-[10px] font-bold text-brand-navy bg-amber-400 rounded-full px-2.5 py-1">
                   Boost to 80+ <ArrowRight className="h-3 w-3" />
                 </div>
               </div>
             </div>
 
             {/* Floating sparkle badge — positioned between the two cards */}
-            <div className="absolute top-[44%] -right-3 lg:-right-6 bg-gradient-to-br from-amber-300 to-amber-500 text-[#0a0e27] rounded-2xl px-3 py-2 shadow-xl flex items-center gap-2 animate-float z-10">
+            <div className="absolute top-[44%] -right-3 lg:-right-6 bg-gradient-to-br from-amber-300 to-amber-500 text-brand-navy rounded-2xl px-3 py-2 shadow-xl flex items-center gap-2 animate-float z-10">
               <Sparkles className="h-4 w-4" strokeWidth={2.5} />
               <div className="text-[11px] font-bold leading-none">
                 Two AIs
@@ -446,7 +437,7 @@ export default function HomePage() {
       {/* ============================================================ */}
       {/* HOW IT WORKS                                                  */}
       {/* ============================================================ */}
-      <section id="how-it-works" className="bg-[#fafaf7] border-y border-slate-200/70">
+      <section id="how-it-works" className="bg-brand-canvas border-y border-slate-200/70">
         <div className="mx-auto max-w-7xl px-6 py-20">
           <div className="max-w-2xl">
             <div className="text-xs font-semibold tracking-wider text-amber-600 uppercase mb-3">
@@ -525,7 +516,7 @@ export default function HomePage() {
               </p>
               <Link
                 href="/recruiter"
-                className="mt-7 inline-flex items-center gap-2 rounded-full bg-[#0a0e27] px-6 py-3 text-sm font-semibold text-white hover:bg-[#1e1b4b] transition-colors group"
+                className="mt-7 inline-flex items-center gap-2 rounded-full bg-brand-navy px-6 py-3 text-sm font-semibold text-white hover:bg-brand-navy-mid transition-colors group"
               >
                 Start ranking resumes
                 <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
@@ -582,16 +573,8 @@ export default function HomePage() {
       {/* ============================================================ */}
       {/* FOR JOB SEEKERS                                               */}
       {/* ============================================================ */}
-      <section id="job-seekers" className="relative bg-[#0a0e27] text-white overflow-hidden">
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage: `
-              radial-gradient(circle at 75% 20%, rgba(251, 191, 36, 0.15), transparent 50%),
-              radial-gradient(circle at 25% 80%, rgba(139, 92, 246, 0.15), transparent 50%)
-            `,
-          }}
-        />
+      <section id="job-seekers" className="relative bg-brand-navy text-white overflow-hidden">
+        <div className="absolute inset-0 bg-seekers-mesh pointer-events-none" />
         <div className="absolute inset-0 grain-overlay opacity-20 pointer-events-none" />
 
         <div className="relative mx-auto max-w-7xl px-6 py-20">
@@ -628,7 +611,7 @@ export default function HomePage() {
                   className="group rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-sm p-6 hover:border-white/20 hover:bg-white/[0.06] transition-all"
                 >
                   <div className={`inline-flex h-11 w-11 rounded-xl bg-gradient-to-br ${f.tone} items-center justify-center shadow-lg mb-4`}>
-                    <f.icon className="h-5 w-5 text-[#0a0e27]" strokeWidth={2.2} />
+                    <f.icon className="h-5 w-5 text-brand-navy" strokeWidth={2.2} />
                   </div>
                   <h3 className="text-base font-semibold text-white mb-1.5">
                     {f.title}
@@ -654,7 +637,7 @@ export default function HomePage() {
               </p>
               <Link
                 href="/job-seeker"
-                className="mt-7 inline-flex items-center gap-2 rounded-full bg-amber-400 px-6 py-3 text-sm font-semibold text-[#0a0e27] hover:bg-amber-300 transition-colors group shadow-[0_8px_32px_rgba(251,191,36,0.3)]"
+                className="mt-7 inline-flex items-center gap-2 rounded-full bg-amber-400 px-6 py-3 text-sm font-semibold text-brand-navy hover:bg-amber-300 transition-colors group shadow-cta"
               >
                 See my match score
                 <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
@@ -667,9 +650,9 @@ export default function HomePage() {
       {/* ============================================================ */}
       {/* FINAL CTA                                                     */}
       {/* ============================================================ */}
-      <section className="bg-[#fafaf7]">
+      <section className="bg-brand-canvas">
         <div className="mx-auto max-w-7xl px-6 py-20">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0a0e27] via-[#1e1b4b] to-[#312e81] p-10 md:p-16 text-white shadow-2xl">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-navy via-brand-navy-mid to-brand-navy-deep p-10 md:p-16 text-white shadow-2xl">
             <div
               className="absolute inset-0 opacity-30 pointer-events-none"
               style={{
@@ -698,7 +681,7 @@ export default function HomePage() {
               <div className="flex flex-col gap-3">
                 <Link
                   href="/signup"
-                  className="group inline-flex items-center justify-center gap-2 rounded-full bg-amber-400 px-7 py-4 text-sm font-bold text-[#0a0e27] hover:bg-amber-300 transition-all shadow-[0_8px_32px_rgba(251,191,36,0.4)] hover:shadow-[0_12px_40px_rgba(251,191,36,0.55)]"
+                  className="group inline-flex items-center justify-center gap-2 rounded-full bg-amber-400 px-7 py-4 text-sm font-bold text-brand-navy hover:bg-amber-300 transition-all shadow-cta-lg hover:shadow-cta-hover"
                 >
                   Get started free
                   <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
@@ -718,13 +701,13 @@ export default function HomePage() {
       {/* ============================================================ */}
       {/* FOOTER                                                        */}
       {/* ============================================================ */}
-      <footer className="bg-[#0a0e27] text-white/70 border-t border-white/5">
+      <footer className="bg-brand-navy text-white/70 border-t border-white/5">
         <div className="mx-auto max-w-7xl px-6 py-14">
           <div className="grid md:grid-cols-[1.5fr_1fr_1fr_1fr] gap-10">
             <div>
               <Link href="/" className="flex items-center gap-2.5">
                 <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-amber-300 to-amber-500 flex items-center justify-center">
-                  <Sparkles className="h-5 w-5 text-[#0a0e27]" strokeWidth={2.5} />
+                  <Sparkles className="h-5 w-5 text-brand-navy" strokeWidth={2.5} />
                 </div>
                 <span className={`${fraunces.className} font-semibold text-xl tracking-tight text-white`}>
                   Talentryx<span className="text-amber-400">.</span>
