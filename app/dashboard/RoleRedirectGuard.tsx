@@ -10,7 +10,7 @@ export default function RoleRedirectGuard() {
     fetch("/api/me")
       .then((res) => res.json())
       .then((data) => {
-        if (data.user_type === "job_seeker") {
+        if (data.active_role === "job_seeker") {
           router.replace("/job-seeker/dashboard");
         }
       })

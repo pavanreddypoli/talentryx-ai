@@ -51,7 +51,7 @@ export default function AfterLoginClient() {
       const data = await res.json();
 
       // 🚀 Redirect based on ACTIVE ROLE
-      if (data?.user_type === "job_seeker") {
+      if (data?.active_role === "job_seeker") {
         router.push("/job-seeker/dashboard");
       } else {
         router.push("/dashboard");

@@ -15,7 +15,7 @@ export async function GET(req: Request) {
 
     const { data: user, error } = await supabaseAdmin
       .from("users")
-      .select("user_type")
+      .select("active_role")
       .eq("email", email)
       .single();
 
@@ -27,7 +27,7 @@ export async function GET(req: Request) {
     }
 
     return NextResponse.json({
-      user_type: user.user_type ?? "recruiter",
+      active_role: user.active_role ?? "recruiter",
     });
   } catch (err) {
     console.error("api/me error:", err);

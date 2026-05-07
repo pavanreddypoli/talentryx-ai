@@ -40,7 +40,7 @@ export default function DashboardClientLayout({
     fetch("/api/me")
       .then((res) => res.json())
       .then((data) => {
-        if (data.user_type === "job_seeker") {
+        if (data.active_role === "job_seeker") {
           window.location.href = "/job-seeker/dashboard";
         }
       })
