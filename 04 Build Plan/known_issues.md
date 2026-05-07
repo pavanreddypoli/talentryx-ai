@@ -58,7 +58,11 @@ Discovered: 2026-05-01 via static analysis of app/api/, lib/, and app/.
 
 ---
 
+## ✅ Resolved — 2026-05-06
+
 ## Finding B — Dashboard always redirects to /login (RLS deny-all on public.users)
+
+**Fix applied:** `supabase/migrations/0003_add_users_rls_policies.sql` — added `SELECT` policy for `authenticated` role using `(auth.jwt() ->> 'email') = email`, plus a `service_role` full-access policy. Applied via psql; both policies confirmed in `pg_policies`. Dev server restart confirmed zero `PGRST116 / Failed to load user role` errors.
 
 ### Diagnosis (2026-05-06)
 
@@ -181,6 +185,35 @@ The service role key bypasses RLS entirely, so the query always reaches the row.
 **Option B-i** is the correct fix. The deny-all state is a missing migration, not an intentional architecture choice. A one-line RLS policy is the right instrument — it's what RLS is for. Option B-ii papers over a DB configuration gap with a service-role workaround that will make the 5-unsynced-users problem harder to diagnose later (the RLS silence is replaced with an application error, but the root cause stays invisible).
 
 The 5 unsynced auth users are a separate problem (Issue 3 downstream effect) and should be handled separately — either by a backfill migration or by ensuring `sync-user` runs on every Supabase Auth sign-in via a database trigger or webhook.
+
+---
+
+## Issue 4 — Orphaned `auth.users` rows with no `public.users` counterpart
+
+**Discovered:** 2026-05-06 during diagnosis of Finding B (RLS deny-all).
+
+**Symptom:** Even after the RLS policy is in place, 5 of the 6 Supabase Auth users will still receive `PGRST116` on dashboard load because there is no matching row in `public.users`. The RLS policy allows the query to reach the table; the 0-row result comes from the missing row, not from RLS.
+
+**Affected accounts:**
+
+| Email | `auth.users` row | `public.users` row |
+|---|---|---|
+| `pavankumarreddy.poli@gmail.com` | ✓ | ✓ (the only synced user) |
+| `pamidisushma02@gmail.com` | ✓ | ✗ |
+| `cheppanupobro@gamail.com` | ✓ | ✗ (typo: gamail) |
+| `cheppanupobro@gmail.com` | ✓ | ✗ |
+| `pavsnkumarreddy.poli@gmail.com` | ✓ | ✗ (typo in name) |
+| `ayaanreddypoli@gmail.com` | ✓ | ✗ |
+
+**Root cause:** `public.users` is populated only via `POST /api/sync-user`, which is called from `AfterLoginClient` on the `/after-login` page. Users who were created in Supabase Auth but never completed the `/after-login` flow (or who signed up during an earlier Clerk-based auth period) never had a `sync-user` call made on their behalf.
+
+**Why this is separate from Finding B:** Finding B (resolved) was a blanket deny-all caused by zero RLS policies. Issue 4 is a data gap — the authenticated session is valid, the policy permits the read, but the row does not exist. These are independent problems; B-i fixed B, not 4.
+
+**Recommended fix (two-part):**
+1. **Backfill:** For each affected email, insert a row into `public.users` with a default `active_role` (`recruiter` or `job_seeker` as appropriate), plus a corresponding `organizations` + `organization_members` row to satisfy any NOT NULL FK constraints. Use `supabaseAdmin` in a one-time migration or Supabase dashboard SQL.
+2. **Prevention:** Add a Supabase Auth webhook or database trigger on `auth.users` INSERT that calls `sync-user` (or directly inserts into `public.users`) so future sign-ups are always synced regardless of whether they hit the `/after-login` page.
+
+**Note:** The two typo accounts (`gamail.com`, `pavsnkumarreddy`) are probably test/accident accounts and may be safe to leave unsynced or delete from `auth.users` directly.
 
 ---
 
