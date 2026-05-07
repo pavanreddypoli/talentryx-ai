@@ -318,6 +318,27 @@ The codebase maintains two separate user-identity tables: `public.users` stores 
 
 ---
 
+## Issue 7 — Theme toggle button is non-functional — ThemeProvider never wired up
+
+**Discovered:** 2026-05-07 during localhost verification of the dashboard sidebar redesign (Step 8).
+
+**Symptom:** Clicking the Light/Dark Mode button in the dashboard sidebar produces no visible change. The button renders, the `onClick` fires (no JS error), but the theme does not flip.
+
+**Root cause:** `useTheme()` from `next-themes` returns a no-op `{ theme: undefined, setTheme: () => {} }` when called outside a `ThemeProvider`. The `next-themes` package is installed (`^0.4.6`) but `app/providers.tsx` only sets up Supabase context — `ThemeProvider` was never added. Confirmed via full `git log` of `app/providers.tsx`: every commit shows only `SupabaseContext.Provider`, no `ThemeProvider` at any point in history.
+
+**Affected files:**
+- [app/providers.tsx](../app/providers.tsx) — needs `ThemeProvider` wrapping `{children}`
+- [app/layout.tsx](../app/layout.tsx) — needs `suppressHydrationWarning` on `<html>` tag
+- [app/dashboard/layoutClient.tsx](../app/dashboard/layoutClient.tsx) — uses `useTheme()` correctly; works as written once provider exists
+
+**Recommended fix (~10 lines):**
+1. In `app/providers.tsx` — import `ThemeProvider` from `next-themes`, wrap the `SupabaseContext.Provider` return with `<ThemeProvider attribute="class" defaultTheme="system" enableSystem>`
+2. In `app/layout.tsx` — add `suppressHydrationWarning` to the `<html>` tag to prevent the server/client theme flash
+
+**Priority:** Low — this feature has never worked in any deployed version; no user is depending on it. Roll into the next dark-mode pass when other dashboard pages are redesigned for dark mode.
+
+---
+
 ## UI-1 — "Job Seeker Dashboard" label shown in recruiter dashboard header (low priority)
 
 **Discovered:** 2026-05-06 during manual browser test confirming Finding C fix.

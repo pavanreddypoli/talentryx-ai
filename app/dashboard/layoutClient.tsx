@@ -16,6 +16,7 @@ import {
   Menu,
   X,
   LogOut,
+  Sparkles,
 } from "lucide-react";
 
 import { useTheme } from "next-themes";
@@ -50,17 +51,15 @@ export default function DashboardClientLayout({
   }, []);
 
   return (
-    <div className="min-h-screen flex bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-screen flex bg-brand-canvas dark:bg-slate-900">
 
       {/* 🌟 MOBILE NAVBAR */}
       <div
-        className="md:hidden fixed top-0 left-0 right-0 z-40
-                   bg-white dark:bg-slate-800 border-b dark:border-slate-700
-                   px-4 py-3 flex items-center justify-between shadow-sm"
+        className="md:hidden fixed top-0 left-0 right-0 z-40 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center justify-between shadow-sm"
       >
         <div className="flex items-center gap-2">
-          <div className="h-7 w-7 bg-indigo-600 rounded-lg" />
-          <span className="font-bold text-indigo-700 dark:text-indigo-300 text-lg">
+          <Sparkles className="h-5 w-5 text-brand-amber" />
+          <span className="font-display font-bold text-slate-800 dark:text-slate-100 text-lg">
             Talentryx AI
           </span>
         </div>
@@ -90,7 +89,7 @@ export default function DashboardClientLayout({
         className={`
           fixed inset-y-0 left-0 z-50 w-64
           bg-white dark:bg-slate-800
-          border-r dark:border-slate-700 shadow-lg
+          border-r border-slate-200 dark:border-slate-700 shadow-sm
           flex flex-col
           transform transition-transform duration-300
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
@@ -98,12 +97,15 @@ export default function DashboardClientLayout({
         `}
       >
         {/* SIDEBAR HEADER */}
-        <div className="p-6 border-b dark:border-slate-700 flex items-center justify-between">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-indigo-700 dark:text-indigo-400">
-              Talentryx AI
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 -mt-1">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-brand-amber" />
+              <h1 className="text-xl font-display font-bold text-slate-800 dark:text-slate-100">
+                Talentryx AI
+              </h1>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Recruiter Intelligence Platform
             </p>
           </div>
@@ -118,7 +120,7 @@ export default function DashboardClientLayout({
         </div>
 
         {/* 🔁 ROLE SWITCHER (desktop, sidebar header area) */}
-        <div className="hidden md:flex px-6 py-3 border-b dark:border-slate-700">
+        <div className="hidden md:flex px-6 py-3 border-b border-slate-200 dark:border-slate-700">
           <RoleSwitcher />
         </div>
 
@@ -132,14 +134,11 @@ export default function DashboardClientLayout({
         </nav>
 
         {/* THEME BUTTON */}
-        <div className="p-4 border-t dark:border-slate-700">
+        <div className="p-4 border-t border-slate-200 dark:border-slate-700">
           {mounted && (
             <button
               onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md
-                         bg-slate-100 dark:bg-slate-700
-                         text-slate-700 dark:text-slate-200
-                         hover:bg-slate-200 dark:hover:bg-slate-600 transition"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-brand-canvas dark:bg-slate-700 text-slate-600 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition"
             >
               {theme === "light" ? (
                 <>
@@ -157,11 +156,11 @@ export default function DashboardClientLayout({
         </div>
 
         {/* LOGOUT */}
-        <div className="p-4 border-t dark:border-slate-700">
+        <div className="p-4 border-t border-slate-200 dark:border-slate-700">
           <form action="/logout" method="post">
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-2 p-2 rounded bg-red-600 text-white hover:bg-red-700"
+              className="w-full flex items-center justify-center gap-2 p-2 rounded-md bg-red-50 hover:bg-red-100 text-red-700 transition"
             >
               <LogOut className="h-4 w-4" />
               Logout
@@ -201,11 +200,11 @@ function SidebarLink({
       href={url}
       onClick={() => closeSidebar()}
       className={`
-        flex items-center gap-3 px-4 py-2 rounded-md text-sm font-medium transition
+        flex items-center gap-3 px-4 py-2 text-sm font-medium transition
         ${
           active
-            ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200"
-            : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+            ? "bg-brand-amber/10 text-brand-amber border-l-2 border-brand-amber rounded-r-md dark:bg-brand-amber/20 dark:text-brand-amber-light dark:border-brand-amber-light"
+            : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-md"
         }
       `}
     >
