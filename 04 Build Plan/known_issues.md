@@ -34,23 +34,27 @@ Discovered: 2026-05-01 via static analysis of app/api/, lib/, and app/.
 | `ranking_results` | `full_text` | not inferred | `TEXT` — exists in DB, never written by `/api/rank` |
 | `ranking_results` | `keyword_match_percent` | `INTEGER` | `NUMERIC` |
 
-**Additional note on Issue 1 below:** `user_type` lives on `profiles`, not `users`. The fix for Issue 1 must change both the table being queried and the column name, not just the column name.
+**Additional note:** `user_type` lives on `profiles`, not `users`. Fix applied — see R2 below.
 
 ---
 
-## Issue 1 — `user_type` vs `active_role` mismatch (silent routing bug)
+### R2 — `user_type` / `active_role` mismatch in `/api/me` (Issue 1 resolved)
 
-`/api/me` does `.from("users").select("user_type")`, but `user_type` does not exist on `public.users` — it is a column on `public.profiles`. The `users` table stores role state in `active_role`. Because PostgREST returns an error when the column is missing, and the route's error handler conflates that error with "user not found", any real logged-in user will receive `{"error":"User not found"}` from `/api/me` and be silently routed to the recruiter dashboard. The `RoleRedirectGuard` catches this client-side for job seekers, but there is still a flash of the wrong dashboard.
+**Found:** `/api/me` queried `user_type` from `public.users`, but that column does not exist on `users` — it lives on `profiles`. The route's error handler masked the PostgREST PGRST204 column-not-found error as a 404 "User not found", so every `/api/me` call failed silently and all role-based routing defaulted to recruiter.
 
-**Updated understanding (2026-05-06):** The original analysis said `user_type` was an unset column on `users`. Schema verification confirmed it does not exist on `users` at all — it is on `profiles`. The fix must change both the table queried and the field returned, not just the field name.
+**Fix applied (2026-05-06, commit 3c66ffc):**
+- [app/api/me/route.ts](../app/api/me/route.ts) — changed `.select("user_type")` → `.select("active_role")`; response field renamed from `user_type` to `active_role`
+- [app/after-login/AfterLoginClient.tsx](../app/after-login/AfterLoginClient.tsx) — reads `data.active_role`
+- [app/dashboard/RoleRedirectGuard.tsx](../app/dashboard/RoleRedirectGuard.tsx) — reads `data.active_role`
+- [app/dashboard/layoutClient.tsx](../app/dashboard/layoutClient.tsx) — reads `data.active_role`
 
-**Affected files:**
-- [app/api/me/route.ts](../app/api/me/route.ts) — queries wrong table (`users`) for wrong column (`user_type`)
-- [app/api/sync-user/route.ts](../app/api/sync-user/route.ts) — writes `active_role` to `users`
-- [app/after-login/AfterLoginClient.tsx](../app/after-login/AfterLoginClient.tsx) — routes based on `/api/me` response
-- [app/dashboard/RoleRedirectGuard.tsx](../app/dashboard/RoleRedirectGuard.tsx) — client-side fallback
+**Verified:** `GET /api/me` with `x-user-email` header returns `{"active_role":"recruiter"}` for a recruiter row and `{"active_role":"job_seeker"}` for a job_seeker row against the restored DB.
 
-**Recommended fix:** Rewrite `/api/me/route.ts` to query `public.users` for `active_role` (not `user_type`) and return it as `active_role`. Update `AfterLoginClient` to read `data.active_role` instead of `data.user_type`.
+**Two follow-on findings surfaced during verification** (not blocking, documented here for the next session):
+
+1. **`/api/me` email header never sent by client-side callers.** `AfterLoginClient`, `RoleRedirectGuard`, and `layoutClient` all call `fetch("/api/me")` with no `x-user-email` header, so they always receive 401. The after-login routing is currently handled entirely by the server-side guard in `app/dashboard/layout.tsx` (which reads `active_role` directly from Supabase). The client-side guards are effectively dead code. This is not a regression from this fix — it was always broken. Fix: either pass `x-user-email` from the client after getting the user via `supabase.auth.getUser()`, or switch `/api/me` to use the session cookie instead of the email header.
+
+2. **`dashboard/layout.tsx` logs `PGRST116` (0 rows) on every dashboard load.** The layout queries `public.users` via `supabaseServer` (anon key) to read `active_role`. When the anon-key client returns 0 rows, it redirects to `/login`. This may be caused by RLS blocking the anon/authenticated role from reading `public.users` rows, or by a mismatch between the Supabase Auth session email and the email stored in `public.users`. Needs investigation before the dashboard is usable end-to-end.
 
 ---
 
