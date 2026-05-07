@@ -54,7 +54,133 @@ Discovered: 2026-05-01 via static analysis of app/api/, lib/, and app/.
 
 1. **`/api/me` email header never sent by client-side callers.** `AfterLoginClient`, `RoleRedirectGuard`, and `layoutClient` all call `fetch("/api/me")` with no `x-user-email` header, so they always receive 401. The after-login routing is currently handled entirely by the server-side guard in `app/dashboard/layout.tsx` (which reads `active_role` directly from Supabase). The client-side guards are effectively dead code. This is not a regression from this fix — it was always broken. Fix: either pass `x-user-email` from the client after getting the user via `supabase.auth.getUser()`, or switch `/api/me` to use the session cookie instead of the email header.
 
-2. **`dashboard/layout.tsx` logs `PGRST116` (0 rows) on every dashboard load.** The layout queries `public.users` via `supabaseServer` (anon key) to read `active_role`. When the anon-key client returns 0 rows, it redirects to `/login`. This may be caused by RLS blocking the anon/authenticated role from reading `public.users` rows, or by a mismatch between the Supabase Auth session email and the email stored in `public.users`. Needs investigation before the dashboard is usable end-to-end.
+2. **`dashboard/layout.tsx` logs `PGRST116` (0 rows) on every dashboard load — Finding B, fully diagnosed 2026-05-06.** See full analysis below.
+
+---
+
+## Finding B — Dashboard always redirects to /login (RLS deny-all on public.users)
+
+### Diagnosis (2026-05-06)
+
+**File:** [app/dashboard/layout.tsx](../app/dashboard/layout.tsx)
+
+**What the code does:**
+```
+supabase = createSupabaseServerClient()       // anon key + session cookie
+authData = supabase.auth.getUser()            // reads session → gets email
+supabase.from("users")
+  .select("active_role")
+  .eq("email", authData.user.email)           // filter: match by email
+  .single()                                   // PGRST116 if 0 rows → redirect("/login")
+```
+
+The client used is `supabaseServer` (anon key), which runs as the `authenticated` role in Postgres when a valid session cookie is present.
+
+**Root cause confirmed: RLS enabled, zero policies.**
+
+```
+public.users  →  rowsecurity = true,  policies = 0
+```
+
+When RLS is enabled on a table with no policies, Postgres applies a **deny-all default** to every non-superuser role. The `authenticated` role (used by `supabaseServer`) cannot read any row — not because the email doesn't match, but because every row is silently filtered out before the WHERE clause even runs. `supabaseServer` returns 0 rows → PGRST116 → `redirect("/login")`.
+
+**Email mismatch ruled out.** The email in the authenticated session (`pavankumarreddy.poli@gmail.com`) matches `public.users.email` exactly, same case, no whitespace difference.
+
+**Identity comparison:**
+
+| | `public.users` | `auth.users` |
+|---|---|---|
+| `id` | `bbf6ef63-f910-41a4-800b-b4b0a27a72b2` | `e44fa35d-4395-49e6-8146-1dcecbbaccf8` |
+| `email` | `pavankumarreddy.poli@gmail.com` | `pavankumarreddy.poli@gmail.com` ✓ |
+| external ID | `clerk_user_id = dev_user_1` / `external_user_id = NULL` | — |
+
+The UUIDs are **completely different** — confirming Issue 3 (no FK link). However, since the layout filters by `email` not by `id`, the mismatch in IDs is not what causes the PGRST116. RLS is the sole cause.
+
+**Additional finding: auth.users has 6 rows, public.users has 1.**
+
+```
+auth.users (6 rows):
+  pavankumarreddy.poli@gmail.com    ← has public.users row
+  pamidisushma02@gmail.com          ← no public.users row
+  cheppanupobro@gamail.com          ← no public.users row (typo: gamail)
+  cheppanupobro@gmail.com           ← no public.users row
+  pavsnkumarreddy.poli@gmail.com    ← no public.users row (typo in name)
+  ayaanreddypoli@gmail.com          ← no public.users row
+```
+
+Five of the six Supabase Auth users have never been synced to `public.users` via `sync-user`. Even after the RLS fix, these users will get PGRST116 because there is no matching row. This is the Issue 3 / dual-identity problem manifesting in practice.
+
+---
+
+### Proposed fixes — choose one
+
+#### Option B-i — Add an RLS policy (preserves architecture)
+
+One SQL statement, no code change:
+
+```sql
+-- supabase/migrations/0003_users_rls_authenticated_select.sql
+CREATE POLICY "users: authenticated can read own row"
+  ON public.users
+  FOR SELECT
+  TO authenticated
+  USING (email = auth.email());
+```
+
+`auth.email()` is a Supabase built-in that returns the email from the current JWT — same value the code passes to `.eq("email", ...)`. The policy lets each authenticated user read exactly their own row and nothing else.
+
+**Pros:**
+- Correct Supabase architecture: RLS is the intended control layer for anon/authenticated reads
+- No code changes — layout.tsx stays as-is
+- Principle of least privilege: authenticated users read only their own row
+- Extensible: other policies (INSERT, UPDATE) can be added independently
+
+**Cons:**
+- Requires a DB migration to apply
+- Does not help the 5 auth users who have no `public.users` row — they still get PGRST116 after this fix (separate problem: Issue 3 / missing sync-user rows)
+- `auth.email()` is an email-string match, which is correct here but would break if an email changed (not a current concern)
+
+---
+
+#### Option B-ii — Switch the lookup to supabaseAdmin (changes architecture)
+
+Two-line code change in [app/dashboard/layout.tsx](../app/dashboard/layout.tsx):
+
+```typescript
+// Keep supabaseServer for auth.getUser() — it needs the session cookie
+const supabase = await createSupabaseServerClient();
+const { data: authData } = await supabase.auth.getUser();
+if (!authData.user) redirect("/login");
+
+// Switch to service role for the public.users lookup — bypasses RLS
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+const { data: userRecord, error } = await supabaseAdmin
+  .from("users")
+  .select("active_role")
+  .eq("email", authData.user.email)
+  .single();
+```
+
+The service role key bypasses RLS entirely, so the query always reaches the row.
+
+**Pros:**
+- No DB migration needed — immediate fix
+- Works regardless of future RLS policy state
+- Also bypasses the 0-row problem for the 5 unsynced auth users — would return a meaningful "not found" error rather than an RLS-silenced one (though still 404/redirect)
+
+**Cons:**
+- Architecturally inconsistent: uses service role in a Server Component where the authenticated client is the correct tool
+- The service role key is already server-side-only (safe), but bypassing RLS means a bug in the email parameter (e.g., an injection or logic error) could expose another user's row instead of being silently blocked
+- Sets a precedent of using service role for reads that should be user-scoped
+- Still does not fix the 5 unsynced auth users — they get a code-level 404 redirect instead of an RLS-silenced one, but the result (login redirect) is the same
+
+---
+
+### Recommendation
+
+**Option B-i** is the correct fix. The deny-all state is a missing migration, not an intentional architecture choice. A one-line RLS policy is the right instrument — it's what RLS is for. Option B-ii papers over a DB configuration gap with a service-role workaround that will make the 5-unsynced-users problem harder to diagnose later (the RLS silence is replaced with an application error, but the root cause stays invisible).
+
+The 5 unsynced auth users are a separate problem (Issue 3 downstream effect) and should be handled separately — either by a backfill migration or by ensuring `sync-user` runs on every Supabase Auth sign-in via a database trigger or webhook.
 
 ---
 
