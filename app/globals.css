@@ -2,9 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Enable Tailwind v4 plugin compatibility */
-@@config "../tailwind.config.js";
-
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -48,6 +45,27 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+}
+
+@theme {
+  /* ── Brand color tokens ───────────────────────────────────────── */
+  --color-brand-navy:        #0a0e27;
+  --color-brand-navy-mid:    #1e1b4b;
+  --color-brand-navy-deep:   #312e81;
+  --color-brand-canvas:      #fafaf7;
+  --color-brand-amber:       #f59e0b;
+  --color-brand-amber-light: #fcd34d;
+
+  /* ── Shadow tokens ────────────────────────────────────────────── */
+  --shadow-cta-sm:    0 4px 24px rgba(251,191,36,0.35);
+  --shadow-cta:       0 8px 32px rgba(251,191,36,0.30);
+  --shadow-cta-lg:    0 8px 32px rgba(251,191,36,0.40);
+  --shadow-cta-hover: 0 12px 40px rgba(251,191,36,0.50);
+  --shadow-logo:      0 0 20px rgba(251,191,36,0.40);
+  --shadow-card:      0 25px 50px rgba(0,0,0,0.40);
+
+  /* ── Display font ─────────────────────────────────────────────── */
+  --font-display: 'Fraunces', serif;
 }
 
 :root {
