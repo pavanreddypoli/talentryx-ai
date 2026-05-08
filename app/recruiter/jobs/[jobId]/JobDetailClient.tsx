@@ -5,13 +5,13 @@
 
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
 import type { Job, Candidate, FilterState } from "@/lib/recruiter/types";
-import { Card, CardContent } from "@/components/ui/card";
 import BulkUploadZone from "@/components/recruiter/BulkUploadZone";
 import FiltersSidebar from "@/components/recruiter/FiltersSidebar";
 import CandidateTable from "@/components/recruiter/CandidateTable";
 import CandidateDrawer from "@/components/recruiter/CandidateDrawer";
+import EditableJobHeader from "@/components/recruiter/EditableJobHeader";
 
 type Props = {
   initialJob: Job;
@@ -22,11 +22,12 @@ type Props = {
 const DEFAULT_FILTERS: FilterState = { score: "all", status: "all", search: "" };
 
 export default function JobDetailClient({ initialJob, initialCandidates, jobId }: Props) {
+  const [job, setJob] = useState<Job>(initialJob);
   const [candidates, setCandidates] = useState<Candidate[]>(initialCandidates);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [activeCandidate, setActiveCandidate] = useState<Candidate | null>(null);
-  const [showFullJD, setShowFullJD] = useState(false);
   const [tableError, setTableError] = useState<string | null>(null);
+  const [showJdChangeBanner, setShowJdChangeBanner] = useState(false);
 
   // Auto-dismiss tableError after 4 seconds
   useEffect(() => {
@@ -41,10 +42,7 @@ export default function JobDetailClient({ initialJob, initialCandidates, jobId }
       if (filters.score === "60to79" && (c.score < 0.6 || c.score >= 0.8)) return false;
       if (filters.score === "below60" && c.score >= 0.6) return false;
       if (filters.status !== "all" && c.status !== filters.status) return false;
-      if (
-        filters.search &&
-        !c.candidate_name.toLowerCase().includes(filters.search.toLowerCase())
-      )
+      if (filters.search && !c.candidate_name.toLowerCase().includes(filters.search.toLowerCase()))
         return false;
       return true;
     });
@@ -59,11 +57,35 @@ export default function JobDetailClient({ initialJob, initialCandidates, jobId }
     [candidates]
   );
 
+  // ── Job field PATCH ──────────────────────────────────────────────────
+  async function onSaveField(field: string, value: string) {
+    const prevJob = job;
+    setJob((prev) => ({ ...prev, [field]: value })); // optimistic
+
+    try {
+      const res = await fetch(`/api/recruiter/jobs/${jobId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [field]: value }),
+      });
+      if (!res.ok) throw new Error("PATCH failed");
+
+      // Show JD change banner when description changes and candidates exist
+      if (field === "description" && value !== prevJob.description && candidates.length > 0) {
+        setShowJdChangeBanner(true);
+      }
+    } catch (err) {
+      setJob(prevJob); // revert
+      setTableError("Couldn't save changes — please try again"); // 4s auto-dismiss
+      throw err; // re-throw so EditableJobHeader can show inline field error
+    }
+  }
+
+  // ── Candidate status PATCH (optimistic) ──────────────────────────────
   async function handleStatusChange(id: string, status: string) {
     const prevCandidates = candidates;
     const prevActive = activeCandidate;
 
-    // Optimistic update — table row + open drawer update immediately
     setCandidates((prev) => prev.map((c) => (c.id === id ? { ...c, status } : c)));
     if (activeCandidate?.id === id) {
       setActiveCandidate((prev) => (prev ? { ...prev, status } : null));
@@ -77,13 +99,13 @@ export default function JobDetailClient({ initialJob, initialCandidates, jobId }
       });
       if (!res.ok) throw new Error("PATCH failed");
     } catch {
-      // Revert both states on failure
       setCandidates(prevCandidates);
       setActiveCandidate(prevActive);
       setTableError("Couldn't update status — please try again");
     }
   }
 
+  // ── Recruiter notes PATCH ─────────────────────────────────────────────
   async function handleNotesChange(id: string, notes: string) {
     try {
       await fetch(`/api/recruiter/jobs/${jobId}/candidates/${id}`, {
@@ -99,15 +121,6 @@ export default function JobDetailClient({ initialJob, initialCandidates, jobId }
     }
   }
 
-  const meta = [initialJob.location, initialJob.experience_level]
-    .filter(Boolean)
-    .join(" · ");
-  const created = new Date(initialJob.created_at).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-
   return (
     <div className="space-y-6">
       {/* Back link */}
@@ -119,59 +132,33 @@ export default function JobDetailClient({ initialJob, initialCandidates, jobId }
         Back to jobs
       </Link>
 
-      {/* Job header */}
-      <Card variant="light-gradient">
-        <CardContent className="space-y-3 py-5">
-          <div className="flex items-start justify-between gap-3 flex-wrap">
-            <h1 className="font-display text-2xl font-bold text-brand-navy">
-              {initialJob.title}
-            </h1>
-            <JobStatusPill status={initialJob.status} />
-          </div>
+      {/* Editable job header */}
+      <EditableJobHeader job={job} stats={stats} onSaveField={onSaveField} />
 
-          {meta && <p className="text-sm text-slate-500">{meta}</p>}
-
-          <p className="text-xs text-slate-400">
-            Created {created}
-            {stats.total > 0 && (
-              <>
-                {" · "}
-                {stats.total} candidate{stats.total !== 1 ? "s" : ""}
-                {stats.shortlisted > 0 && (
-                  <span className="text-emerald-600"> · {stats.shortlisted} shortlisted</span>
-                )}
-                {stats.rejected > 0 && (
-                  <span className="text-red-500"> · {stats.rejected} rejected</span>
-                )}
-              </>
-            )}
-          </p>
-
-          <div>
-            <p
-              className={`text-sm text-slate-600 whitespace-pre-line ${
-                showFullJD ? "" : "line-clamp-3"
-              }`}
-            >
-              {initialJob.description}
-            </p>
-            <button
-              type="button"
-              onClick={() => setShowFullJD((v) => !v)}
-              className="mt-1 text-xs text-brand-amber hover:underline"
-            >
-              {showFullJD ? "Show less" : "Show more"}
-            </button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Bulk upload zone */}
+      {/* Bulk upload — uses latest job.description so ranking always uses current JD */}
       <BulkUploadZone
-        jobDescription={initialJob.description}
+        jobDescription={job.description}
         jobId={jobId}
         onRankingComplete={(newCandidates) => setCandidates(newCandidates)}
       />
+
+      {/* JD change banner — files not in Supabase Storage so re-rank is deferred to D6.2 */}
+      {showJdChangeBanner && (
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-brand-amber/20 bg-brand-amber/5 px-4 py-3 text-sm">
+          <p className="text-slate-700">
+            Job description updated. Future uploads will be ranked against the new JD.
+            Existing scores reflect the previous description.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowJdChangeBanner(false)}
+            className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
+            aria-label="Dismiss"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Candidates section */}
       {candidates.length === 0 ? (
@@ -204,30 +191,5 @@ export default function JobDetailClient({ initialJob, initialCandidates, jobId }
         onNotesChange={handleNotesChange}
       />
     </div>
-  );
-}
-
-function JobStatusPill({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    open: "bg-emerald-100 text-emerald-700",
-    closed: "bg-slate-100 text-slate-600",
-    archived: "bg-slate-100 text-slate-400",
-  };
-  const dots: Record<string, string> = {
-    open: "bg-emerald-500",
-    closed: "bg-slate-400",
-    archived: "bg-slate-300",
-  };
-  return (
-    <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-        styles[status] ?? styles.closed
-      }`}
-    >
-      <span
-        className={`h-1.5 w-1.5 rounded-full ${dots[status] ?? dots.closed}`}
-      />
-      {status}
-    </span>
   );
 }
