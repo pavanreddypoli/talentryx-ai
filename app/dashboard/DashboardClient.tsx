@@ -283,7 +283,7 @@ export default function DashboardClient() {
             <Sparkles className="h-5 w-5 text-yellow-300" />
             Talentryx AI
           </h1>
-          <span className="text-xs opacity-80">Job Seeker Dashboard</span>
+          <span className="text-xs opacity-80">Recruiter Dashboard</span>
         </div>
       </header>
 

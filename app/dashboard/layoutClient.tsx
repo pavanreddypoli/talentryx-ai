@@ -38,6 +38,7 @@ export default function DashboardClientLayout({
   // 🔒 NEW: Client-side role guard
   // Ensures job seekers are redirected away from recruiter dashboard
   useEffect(() => {
+    if (pathname.startsWith("/job-seeker")) return;
     fetch("/api/me")
       .then((res) => res.json())
       .then((data) => {
@@ -48,7 +49,7 @@ export default function DashboardClientLayout({
       .catch(() => {
         // fail silently — server guard still exists
       });
-  }, []);
+  }, [pathname]);
 
   return (
     <div className="min-h-screen flex bg-brand-canvas dark:bg-slate-900">
