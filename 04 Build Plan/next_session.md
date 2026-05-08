@@ -1,5 +1,22 @@
 # Next session — pick up here
 
+## E1b — Billing page (next after E1a ships)
+
+Build `/recruiter/billing` once Stripe state is confirmed. Prerequisites before coding:
+1. Confirm `STRIPE_PRICE_PRO` is set with a real price ID on Vercel (check Vercel dashboard)
+2. Configure Stripe Customer Portal in Stripe dashboard (Billing → Customer portal → Save configuration) — the portal redirect will fail silently without this
+3. Fix `create-checkout-session` price ID: change hardcoded `"price_12345_pro_month"` → `process.env.STRIPE_PRICE_PRO`
+
+Files to create:
+- `app/recruiter/billing/layout.tsx` (auth + role guard, same pattern as settings)
+- `app/recruiter/billing/page.tsx` (server: fetch `profiles.is_pro` + `stripe_customer_id`)
+- `app/recruiter/billing/BillingClient.tsx` (plan display + Manage/Upgrade buttons)
+- `app/api/recruiter/billing/portal/route.ts` (POST: create Stripe customer portal session)
+
+Sidebar: update Billing link `/dashboard/billing` → `/recruiter/billing` (same edit as Settings in E1a).
+
+---
+
 ## D7.1 — Share button deep-link (deferred)
 The Share button in the candidate drawer is a stub (`disabled`, title="Share — coming in D7.1"). When built:
 - Generate a short-lived share token or signed URL for the candidate profile

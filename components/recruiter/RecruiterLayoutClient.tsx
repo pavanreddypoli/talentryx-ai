@@ -129,16 +129,15 @@ export default function RecruiterLayoutClient({
             label="Jobs"
             icon={<Briefcase className="h-4 w-4" />}
           />
-          {/* Settings + Billing use legacy /dashboard/* routes until migrated in a future step */}
           <SidebarLink
             closeSidebar={() => setSidebarOpen(false)}
-            url="/dashboard/settings"
+            url="/recruiter/settings"
             label="Settings"
             icon={<Settings className="h-4 w-4" />}
           />
           <SidebarLink
             closeSidebar={() => setSidebarOpen(false)}
-            url="/dashboard/billing"
+            url="/recruiter/billing"
             label="Billing"
             icon={<CreditCard className="h-4 w-4" />}
           />
@@ -200,7 +199,11 @@ function SidebarLink({
   closeSidebar: () => void;
 }) {
   const pathname = usePathname();
-  const active = pathname === url;
+  // Use startsWith for section roots so sub-pages stay highlighted; exact match avoids
+  // /recruiter/dashboard activating on /recruiter/dashboard/anything unintentionally.
+  const active = url === "/recruiter/dashboard"
+    ? pathname === url
+    : pathname.startsWith(url);
 
   return (
     <Link
