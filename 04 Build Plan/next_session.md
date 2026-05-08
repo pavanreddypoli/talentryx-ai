@@ -1,7 +1,38 @@
-# Next Session — Phase 0 Checkpoint
+# Next Session — Recruiter Build Checkpoint
 
-Last updated: 2026-05-07
-Phase 0 status: ~70% complete
+Last updated: 2026-05-08
+Phase 0 status: complete. Recruiter build (D1–D4) in progress.
+
+---
+
+## Deferred verification on prod (next session)
+
+D4 (commit `c7d9c12`) was pushed without localhost manual verification per user direction. Walk through the 10-point checklist on https://talentryxai.com/recruiter/jobs at start of next session:
+
+1. `/recruiter/jobs` — empty state A (Sparkles + "Create your first job")
+2. Click "Open" pill — URL `?status=open`, empty state B with "Show all jobs" link, Open pill highlighted amber
+3. Click "Closed" — URL `?status=closed`, same pattern
+4. Click "Archived" — URL `?status=archived`, same pattern
+5. Click "Show all jobs" — returns to `/recruiter/jobs`, empty state A
+6. Click "All" pill — same result
+7. Sidebar: "Jobs" active on `/recruiter/jobs`, "Dashboard" active on `/recruiter/dashboard`
+8. `/recruiter/dashboard` still renders cleanly (no regression)
+9. Hard refresh on filtered URL preserves state
+10. Console clean
+
+---
+
+## D-Series Build Status
+
+| Step | Description | Status | Commit |
+|---|---|---|---|
+| D1 | DB schema — `jobs` table, RLS, trigger | ✅ Done | `2c86e9a` |
+| D2 | Recruiter API routes (`/api/recruiter/*`) | ✅ Done | `2431cc6`, `ce28668` |
+| D3 | Recruiter overview dashboard (`/recruiter/dashboard`) | ✅ Done, localhost verified | `9606a5d` |
+| D4 refactor | Extract sidebar, empty state, jobStats utility | ✅ Done, localhost verified | `49a67f2` |
+| D4 | Jobs listing page (`/recruiter/jobs`) | ⚠️ Pushed, prod verification pending | `c7d9c12` |
+| D5 | Create job form (`/recruiter/jobs/new`) | 🔜 Next | — |
+| D6 | Job detail + candidates table (`/recruiter/jobs/[id]`) | 🔜 | — |
 
 ---
 
