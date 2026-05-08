@@ -54,7 +54,7 @@ export default function AfterLoginClient() {
       if (data?.active_role === "job_seeker") {
         router.push("/job-seeker/dashboard");
       } else {
-        router.push("/dashboard");
+        router.push("/recruiter/dashboard");
       }
     }
 

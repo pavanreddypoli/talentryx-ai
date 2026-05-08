@@ -32,7 +32,7 @@ export default function RoleSwitcher() {
       body: JSON.stringify({ role }),
     });
 
-    router.push(role === "job_seeker" ? "/job-seeker/dashboard" : "/dashboard");
+    router.push(role === "job_seeker" ? "/job-seeker/dashboard" : "/recruiter/dashboard");
   }
 
   if (!activeRole || roles.length < 2) return null;

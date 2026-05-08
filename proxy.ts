@@ -57,9 +57,10 @@ export const config = {
   matcher: [
     // API routes — header injection for /api/me* routes
     "/api/:path*",
-    // Dashboard routes — session cookie refresh (Supabase SSR requirement)
+    // App routes — session cookie refresh (Supabase SSR requirement)
     // Routing logic stays in server components; middleware only refreshes tokens here
     "/dashboard/:path*",
     "/job-seeker/:path*",
+    "/recruiter/dashboard/:path*",
   ],
 };
