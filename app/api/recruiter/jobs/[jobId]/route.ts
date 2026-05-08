@@ -27,18 +27,36 @@ export async function GET(req: Request, { params }: Ctx) {
 
   const sessionIds = sessions?.map((s) => s.id) ?? [];
 
-  let candidateCount = 0;
+  let totalCandidates = 0;
+  let shortlistedCount = 0;
+  let rejectedCount = 0;
+  let pendingCount = 0;
+
   if (sessionIds.length > 0) {
-    const { count } = await supabase
+    const { data: results } = await supabase
       .from("ranking_results")
-      .select("id", { count: "exact", head: true })
+      .select("status")
       .in("session_id", sessionIds);
-    candidateCount = count ?? 0;
+
+    if (results) {
+      totalCandidates = results.length;
+      for (const r of results) {
+        if (r.status === "shortlisted") shortlistedCount++;
+        else if (r.status === "rejected") rejectedCount++;
+        else pendingCount++;
+      }
+    }
   }
 
   return NextResponse.json({
     job,
-    stats: { session_count: sessionIds.length, candidate_count: candidateCount },
+    stats: {
+      session_count: sessionIds.length,
+      total_candidates: totalCandidates,
+      shortlisted_count: shortlistedCount,
+      rejected_count: rejectedCount,
+      pending_count: pendingCount,
+    },
   });
 }
 
@@ -111,5 +129,8 @@ export async function DELETE(req: Request, { params }: Ctx) {
     return NextResponse.json({ error: "Delete failed" }, { status: 500 });
   }
 
+  // Intentionally idempotent: RLS silently no-ops when jobId doesn't exist or
+  // belongs to another recruiter, so this always returns { success: true }.
+  // Double-deletes are safe; callers should not expect 404 on a missing job.
   return NextResponse.json({ success: true });
 }
