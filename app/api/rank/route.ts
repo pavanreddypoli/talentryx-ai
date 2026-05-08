@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import {
   extractPdfText,
   extractDocText,
@@ -236,6 +237,17 @@ export async function POST(req: Request) {
 
       text = normalizeText(text);
 
+      // Best-effort upload to private `resumes` bucket — failure never blocks ranking
+      let storagePath: string | null = null;
+      try {
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const path = `${session.user.id}/${Date.now()}_${safeName}`;
+        const { error: uploadErr } = await supabaseAdmin.storage
+          .from("resumes")
+          .upload(path, buffer, { contentType: file.type || "application/octet-stream" });
+        if (!uploadErr) storagePath = path;
+      } catch { /* swallow — same best-effort pattern as DB persistence */ }
+
       const { matched, missing, matchPercent, score } = computeMatch(keywords, text);
       const { strengths, gaps } = makeInsights(candidateName, matchPercent, matched, missing);
 
@@ -259,6 +271,7 @@ export async function POST(req: Request) {
         summary: strengths,
         strengths,
         gaps,
+        storage_path: storagePath,
       });
     }
 
@@ -292,7 +305,7 @@ export async function POST(req: Request) {
           missing_keywords: r.missing_keywords,
           summary: r.summary,
           full_text: r.full_text,
-          storage_path: null,
+          storage_path: r.storage_path,
           created_at: new Date().toISOString(),
         }));
 

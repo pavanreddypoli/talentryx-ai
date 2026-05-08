@@ -186,6 +186,7 @@ export default function JobDetailClient({ initialJob, initialCandidates, jobId }
       <CandidateDrawer
         key={activeCandidate?.id}
         candidate={activeCandidate}
+        jobId={jobId}
         onClose={() => setActiveCandidate(null)}
         onStatusChange={handleStatusChange}
         onNotesChange={handleNotesChange}

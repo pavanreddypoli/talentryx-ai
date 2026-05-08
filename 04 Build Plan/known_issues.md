@@ -353,6 +353,38 @@ The codebase maintains two separate user-identity tables: `public.users` stores 
 
 ---
 
+## Issue 10 — Supabase Storage `resumes` bucket SELECT policy is too permissive
+
+**Discovered:** 2026-05-08 during D7 file-persistence investigation.
+
+**Priority:** MEDIUM-HIGH. Fix before any other recruiters/users beyond the dev account get access to the bucket. Service-role pattern in our app bypasses this, but if anyone hits Supabase Storage URLs directly, they could read other users' resumes.
+
+**Symptom:** The `resumes` bucket currently has a SELECT policy scoped to `auth.role() = 'authenticated'` — any authenticated user can read any file in the bucket, regardless of ownership. There is no ownership check tying the file path to the uploader's user ID.
+
+**Root cause:** The storage policy was written permissively during initial setup. File paths are namespaced by `user_id` in the upload code (`${session.user.id}/${...}`), but the policy does not enforce this at the Supabase layer.
+
+**App behavior:** All resume access in the app goes through `GET /api/recruiter/jobs/[jobId]/candidates/[candidateId]/resume`, which uses `supabaseAdmin.storage.createSignedUrl()`. This endpoint validates job ownership before issuing the URL, so the app never exposes unauthorized files. But a user who obtains another user's Storage path can construct a direct Supabase Storage URL and read the file.
+
+**Recommended fix (one SQL statement):**
+```sql
+-- Replace existing SELECT policy with an ownership-scoped one
+DROP POLICY IF EXISTS "allow authenticated read" ON storage.objects;
+CREATE POLICY "resumes: owner read only"
+  ON storage.objects FOR SELECT
+  TO authenticated
+  USING (
+    bucket_id = 'resumes'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+```
+`storage.foldername(name)` returns the path segments; `[1]` is the first segment, which equals `session.user.id` per our upload convention.
+
+**Affected files:**
+- Upload path set in `app/api/rank/route.ts` — `${session.user.id}/...`
+- Signed URL issued by `app/api/recruiter/jobs/[jobId]/candidates/[candidateId]/resume/route.ts`
+
+---
+
 ## UI-1 — "Job Seeker Dashboard" label shown in recruiter dashboard header (low priority)
 
 **Discovered:** 2026-05-06 during manual browser test confirming Finding C fix.

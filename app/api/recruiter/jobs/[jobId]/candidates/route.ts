@@ -35,7 +35,7 @@ export async function GET(req: Request, { params }: Ctx) {
   const { data: candidates, error: resultsErr } = await supabase
     .from("ranking_results")
     .select(
-      "id, session_id, candidate_name, file_name, score, keyword_match_percent, matched_keywords, missing_keywords, summary, status, recruiter_notes, created_at"
+      "id, session_id, candidate_name, file_name, score, keyword_match_percent, matched_keywords, missing_keywords, summary, status, recruiter_notes, storage_path, created_at"
     )
     .in("session_id", sessionIds)
     .order("score", { ascending: false });

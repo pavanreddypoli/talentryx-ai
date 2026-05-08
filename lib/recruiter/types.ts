@@ -10,6 +10,7 @@ export type Candidate = {
   summary: string[] | null; // stored strengths array
   status: string; // "pending" | "shortlisted" | "rejected"
   recruiter_notes: string | null;
+  storage_path: string | null;
   created_at: string;
 };
 

@@ -1,5 +1,16 @@
 # Next session — pick up here
 
+## D7.1 — Share button deep-link (deferred)
+The Share button in the candidate drawer is a stub (`disabled`, title="Share — coming in D7.1"). When built:
+- Generate a short-lived share token or signed URL for the candidate profile
+- Route: `/recruiter/jobs/[jobId]/candidates/[candidateId]/share` or a token-based viewer
+- Scope: read-only view of name, score, strengths, gaps — no notes, no status controls
+- Auth model: unauthenticated viewer (link sharing), token in URL, expiry TBD
+- Pick up in D7.1 when share flow is scoped
+
+---
+
+
 ## Where we are
 D1 → D4 of the recruiter dashboard build complete. Halfway through Step D of the 7-step recruiter sequence (D1-D7).
 
