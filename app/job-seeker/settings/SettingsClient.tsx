@@ -12,7 +12,7 @@ export default function SettingsClient({ initialFullName, email, activeRole }: P
       initialFullName={initialFullName}
       email={email}
       activeRole={activeRole}
-      apiEndpoint="/api/recruiter/settings"
+      apiEndpoint="/api/job-seeker/settings"
     />
   );
 }

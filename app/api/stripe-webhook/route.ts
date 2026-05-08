@@ -29,6 +29,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
+  // ── checkout.session.completed ──────────────────────────────────────────────
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
 
@@ -40,12 +41,44 @@ export async function POST(req: Request) {
       return NextResponse.json({ received: true });
     }
 
-    // Support both field names: new routes use 'user_id', legacy used 'supabase_user_id'
     const userId = session.metadata?.user_id ?? session.metadata?.supabase_user_id;
+    // Legacy fallback: old Stripe events without subproduct metadata are assumed to be Pro.
+    // If someone subscribed via manual Stripe checkout before this commit, they may
+    // incorrectly get is_pro = true. Acceptable edge case for now — log Issue 11 if any occur.
+    const subproduct = session.metadata?.subproduct ?? "pro";
+
     if (userId) {
-      console.log("[stripe-webhook] talentryx event, updating user:", userId);
-      // Use supabaseAdmin — webhook has no user session, so authenticated-role RLS would deny the UPDATE
-      await supabaseAdmin.from("profiles").update({ is_pro: true }).eq("id", userId);
+      console.log("[stripe-webhook] talentryx event, updating user:", userId, "subproduct:", subproduct);
+      if (subproduct === "boost") {
+        await supabaseAdmin.from("profiles").update({ has_boost: true }).eq("id", userId);
+      } else {
+        await supabaseAdmin.from("profiles").update({ is_pro: true }).eq("id", userId);
+      }
+    }
+  }
+
+  // ── customer.subscription.deleted ──────────────────────────────────────────
+  if (event.type === "customer.subscription.deleted") {
+    const subscription = event.data.object;
+
+    console.log("[stripe-webhook] subscription.deleted, product:", subscription.metadata?.product, "subproduct:", subscription.metadata?.subproduct);
+
+    // Only process Talentryx cancellations
+    if (subscription.metadata?.product !== "talentryx") {
+      console.log("[stripe-webhook] non-talentryx subscription.deleted, ignoring");
+      return NextResponse.json({ received: true });
+    }
+
+    const userId = subscription.metadata?.user_id;
+    const subproduct = subscription.metadata?.subproduct ?? "pro";
+
+    if (userId) {
+      console.log("[stripe-webhook] cancellation, reverting user:", userId, "subproduct:", subproduct);
+      if (subproduct === "boost") {
+        await supabaseAdmin.from("profiles").update({ has_boost: false }).eq("id", userId);
+      } else {
+        await supabaseAdmin.from("profiles").update({ is_pro: false }).eq("id", userId);
+      }
     }
   }
 

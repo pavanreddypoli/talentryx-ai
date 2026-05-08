@@ -1,14 +1,14 @@
-import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { redirect } from "next/navigation";
 import JobSeekerLayoutClient from "@/components/jobseeker/JobSeekerLayoutClient";
 
-export default async function JobSeekerDashboardLayout({
+export default async function JobSeekerBillingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const supabase = await createSupabaseServerClient();
-  const { data: authData } = await supabase.auth.getUser(); // validates JWT server-side
+  const { data: authData } = await supabase.auth.getUser();
 
   if (!authData.user) redirect("/login");
 

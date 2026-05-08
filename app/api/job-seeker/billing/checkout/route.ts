@@ -6,17 +6,17 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST() {
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser(); // validates JWT server-side
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("stripe_customer_id, is_pro")
+      .select("stripe_customer_id, has_boost")
       .eq("id", user.id)
       .single();
 
-    if (profile?.is_pro) {
+    if (profile?.has_boost) {
       return NextResponse.json({ error: "Already subscribed" }, { status: 400 });
     }
 
@@ -38,18 +38,18 @@ export async function POST() {
       mode: "subscription",
       customer: customerId,
       payment_method_types: ["card"],
-      line_items: [{ price: process.env.STRIPE_PRICE_PRO!, quantity: 1 }],
-      success_url: "https://talentryxai.com/recruiter/billing?success=true",
-      cancel_url: "https://talentryxai.com/recruiter/billing",
-      metadata: { product: "talentryx", subproduct: "pro", user_id: user.id },
+      line_items: [{ price: process.env.STRIPE_PRICE_BOOST!, quantity: 1 }],
+      success_url: "https://talentryxai.com/job-seeker/billing?success=true",
+      cancel_url: "https://talentryxai.com/job-seeker/billing",
+      metadata: { product: "talentryx", subproduct: "boost", user_id: user.id },
       subscription_data: {
-        metadata: { product: "talentryx", subproduct: "pro", user_id: user.id },
+        metadata: { product: "talentryx", subproduct: "boost", user_id: user.id },
       },
     });
 
     return NextResponse.json({ url: session.url });
   } catch (err) {
-    console.error("POST /api/recruiter/billing/checkout:", err);
+    console.error("POST /api/job-seeker/billing/checkout:", err);
     return NextResponse.json(
       { error: "Couldn't start upgrade — please try again or contact support." },
       { status: 500 }
