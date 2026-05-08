@@ -339,6 +339,20 @@ The codebase maintains two separate user-identity tables: `public.users` stores 
 
 ---
 
+## Issue 9 — Gaps in candidate drawer stored as keyword tokens, not prose
+
+**Discovered:** 2026-05-08 during D6 build.
+
+**Symptom:** The "Gaps" section in the candidate detail drawer displays raw keyword tokens (e.g. `"aws"`, `"docker"`, `"kubernetes"`) as chips rather than human-readable prose sentences (e.g. "Cloud keywords appear missing — add examples of AWS/GCP usage").
+
+**Root cause:** `/api/rank` computes prose gap descriptions (`gaps[]`) but stores only `missing_keywords[]` (raw token array) in `ranking_results`. The `gaps[]` strings are returned in the API response but never persisted to the DB. `GET /api/recruiter/jobs/[jobId]/candidates` returns `missing_keywords` from the DB, which is all the drawer has to work with.
+
+**Fix for D7:** Either (a) add a `gaps TEXT[]` column to `ranking_results` and persist the computed gap strings in `/api/rank`, or (b) regenerate prose gaps client-side from `missing_keywords` using the same bucketing/insight logic. Option (a) is cleaner — one migration, persisted alongside strengths.
+
+**Priority:** Low — keyword chips are readable and informative. Polish pass in D7.
+
+---
+
 ## UI-1 — "Job Seeker Dashboard" label shown in recruiter dashboard header (low priority)
 
 **Discovered:** 2026-05-06 during manual browser test confirming Finding C fix.
