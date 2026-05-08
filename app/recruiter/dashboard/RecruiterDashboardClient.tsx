@@ -5,9 +5,10 @@
 //   /recruiter/jobs/[id]   → 404 until D6
 
 import Link from "next/link";
-import { Briefcase, Users, Star, Clock, Plus, Sparkles } from "lucide-react";
+import { Briefcase, Users, Star, Clock, Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import RecruiterEmptyState from "@/components/recruiter/RecruiterEmptyState";
 
 type JobStats = {
   total: number;
@@ -110,7 +111,7 @@ export default function RecruiterDashboardClient({
         </div>
 
         {jobs.length === 0 ? (
-          <EmptyState />
+          <RecruiterEmptyState />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {jobs.map((job) => (
@@ -148,33 +149,6 @@ function StatCard({
           </span>
         </div>
         <p className="font-display text-4xl font-bold text-brand-navy">{value}</p>
-      </CardContent>
-    </Card>
-  );
-}
-
-function EmptyState() {
-  return (
-    <Card variant="light-gradient" className="py-16">
-      <CardContent className="flex flex-col items-center text-center gap-4">
-        <div className="flex items-center justify-center h-14 w-14 rounded-full bg-brand-amber/10">
-          <Sparkles className="h-7 w-7 text-brand-amber" />
-        </div>
-        <div>
-          <h3 className="font-display text-lg font-semibold text-brand-navy">
-            No jobs yet
-          </h3>
-          <p className="mt-1 text-sm text-slate-500">
-            Create your first job posting to start ranking candidates.
-          </p>
-        </div>
-        {/* /recruiter/jobs/new is a 404 until D5 ships */}
-        <Button variant="brand-primary" asChild>
-          <Link href="/recruiter/jobs/new">
-            <Plus className="h-4 w-4" />
-            Create your first job
-          </Link>
-        </Button>
       </CardContent>
     </Card>
   );
