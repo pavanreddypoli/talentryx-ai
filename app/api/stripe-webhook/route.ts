@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);  // ← FIXED (removed apiVersion)
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 async function buffer(readable: any) {
   const chunks = [];
@@ -29,17 +29,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  const supabase = await createSupabaseServerClient();
-
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
 
-    const userId = session.metadata?.supabase_user_id;
+    console.log("[stripe-webhook] received event:", event.type, "metadata.product:", session.metadata?.product);
+
+    // Only process Talentryx events — ignore AlgorythmAI/WealthPlanrAI/etc
+    if (session.metadata?.product !== "talentryx") {
+      console.log("[stripe-webhook] non-talentryx event, ignoring:", session.metadata?.product);
+      return NextResponse.json({ received: true });
+    }
+
+    // Support both field names: new routes use 'user_id', legacy used 'supabase_user_id'
+    const userId = session.metadata?.user_id ?? session.metadata?.supabase_user_id;
     if (userId) {
-      await supabase
-        .from("profiles")
-        .update({ is_pro: true })
-        .eq("id", userId);
+      console.log("[stripe-webhook] talentryx event, updating user:", userId);
+      // Use supabaseAdmin — webhook has no user session, so authenticated-role RLS would deny the UPDATE
+      await supabaseAdmin.from("profiles").update({ is_pro: true }).eq("id", userId);
     }
   }
 

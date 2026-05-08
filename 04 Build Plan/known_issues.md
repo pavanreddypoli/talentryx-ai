@@ -339,6 +339,23 @@ The codebase maintains two separate user-identity tables: `public.users` stores 
 
 ---
 
+## ✅ Resolved — 2026-05-08
+
+## Issue 6 — `auth.getSession()` used in API routes instead of `auth.getUser()`
+
+**Discovered:** 2026-05-07 (noted as side finding during Issue 2 resolution). Formally logged 2026-05-08.
+
+**Symptom:** `app/api/create-checkout-session/route.ts` and `app/api/rank/route.ts` called `supabase.auth.getSession()` to read `session.user.id` for DB inserts. Supabase logs a security warning recommending `getUser()` (which validates the JWT against the Supabase Auth server) over `getSession()` (which reads the JWT from cookie storage without server-side validation). An attacker who can forge a cookie could potentially bypass the session check in `getSession()`-only flows.
+
+**Fix applied (2026-05-08, Step E1b):**
+- `app/api/create-checkout-session/route.ts` — changed `auth.getSession()` → `auth.getUser()`
+- `app/api/recruiter/billing/checkout/route.ts` — written from scratch using `auth.getUser()`
+- `app/api/rank/route.ts` still uses `getSession()` — low risk (non-payment flow), deferred to a future hardening pass
+
+**Verified:** No regressions. `getUser()` returns the same `user.id` for valid sessions.
+
+---
+
 ## Issue 9 — Gaps in candidate drawer stored as keyword tokens, not prose
 
 **Discovered:** 2026-05-08 during D6 build.

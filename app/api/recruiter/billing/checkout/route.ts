@@ -5,28 +5,24 @@ import { createSupabaseServerClient } from "@/lib/supabaseServer";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST() {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser(); // validates JWT server-side
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   try {
-    const supabase = await createSupabaseServerClient();
-
-    // getUser() validates JWT server-side (preferred over getSession per Supabase security guidance)
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
-    // Get or create Stripe customer
-    let customerId: string | null = null;
-
     const { data: profile } = await supabase
       .from("profiles")
-      .select("stripe_customer_id")
+      .select("stripe_customer_id, is_pro")
       .eq("id", user.id)
       .single();
 
-    if (profile?.stripe_customer_id) {
-      customerId = profile.stripe_customer_id;
-    } else {
+    if (profile?.is_pro) {
+      return NextResponse.json({ error: "Already subscribed" }, { status: 400 });
+    }
+
+    // Get or create Stripe customer
+    let customerId = profile?.stripe_customer_id ?? null;
+    if (!customerId) {
       const customer = await stripe.customers.create({
         email: user.email!,
         metadata: { supabase_user_id: user.id },
@@ -38,24 +34,19 @@ export async function POST() {
         .eq("id", user.id);
     }
 
-    const sessionObj = await stripe.checkout.sessions.create({
+    const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      customer: customerId!,
+      customer: customerId,
       payment_method_types: ["card"],
-      line_items: [
-        {
-          price: process.env.STRIPE_PRICE_PRO!, // replaces hardcoded fake price_12345_pro_month
-          quantity: 1,
-        },
-      ],
+      line_items: [{ price: process.env.STRIPE_PRICE_PRO!, quantity: 1 }],
       success_url: "https://talentryxai.com/recruiter/billing?success=true",
       cancel_url: "https://talentryxai.com/recruiter/billing",
       metadata: { product: "talentryx", user_id: user.id },
     });
 
-    return NextResponse.json({ url: sessionObj.url });
-  } catch (error) {
-    console.error("POST /api/create-checkout-session:", error);
+    return NextResponse.json({ url: session.url });
+  } catch (err) {
+    console.error("POST /api/recruiter/billing/checkout:", err);
     return NextResponse.json(
       { error: "Couldn't start upgrade — please try again or contact support." },
       { status: 500 }

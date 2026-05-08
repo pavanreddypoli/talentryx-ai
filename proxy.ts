@@ -64,5 +64,6 @@ export const config = {
     "/recruiter/dashboard/:path*",
     "/recruiter/jobs/:path*",
     "/recruiter/settings/:path*",
+    "/recruiter/billing/:path*",
   ],
 };
