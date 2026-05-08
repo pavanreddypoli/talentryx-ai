@@ -1,5 +1,5 @@
-import DashboardClient from "@/app/dashboard/DashboardClient";
+import JobSeekerDashboardClient from "./JobSeekerDashboardClient";
 
 export default function JobSeekerDashboardPage() {
-  return <DashboardClient />;
+  return <JobSeekerDashboardClient />;
 }
