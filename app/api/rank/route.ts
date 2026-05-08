@@ -199,6 +199,7 @@ export async function POST(req: Request) {
 
     const formData = await req.formData();
     const jobDescription = formData.get("jobDescription") as string;
+    const jobId = (formData.get("jobId") as string) || null;
     const files = formData.getAll("resumes") as File[];
 
     if (!jobDescription || files.length === 0) {
@@ -271,6 +272,7 @@ export async function POST(req: Request) {
         .insert({
           user_id: session.user.id,
           job_description: jobDescription,
+          job_id: jobId,
           created_at: new Date().toISOString(),
         })
         .select("id")
