@@ -19,7 +19,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import { Upload, Sparkles, Loader2, X } from "lucide-react";
+import {
+  UploadCloud,
+  Sparkles,
+  Loader2,
+  X,
+  ClipboardList,
+  FileUp,
+  Target,
+  ArrowRight,
+  CheckCircle2,
+  TrendingUp,
+  AlertCircle,
+  BarChart3,
+} from "lucide-react";
 
 /* -----------------------------
    Score badge logic
@@ -117,9 +130,6 @@ export default function JobSeekerDashboardClient() {
     setAiOpen(true);
   }
 
-  // =========================
-  // 🔧 FIXED: Rewrite with AI
-  // =========================
   async function handleRewrite(r: any) {
     if (!jobDescription?.trim()) {
       alert("Please paste a job description first.");
@@ -136,7 +146,7 @@ export default function JobSeekerDashboardClient() {
     setAiWorking(true);
 
     try {
-      const res = await fetch("/api/ai/rewrite-resume", { // 🔧 FIX
+      const res = await fetch("/api/ai/rewrite-resume", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -147,7 +157,7 @@ export default function JobSeekerDashboardClient() {
 
       let data: any;
       try {
-        data = await res.json(); // 🔧 FIX (guarded)
+        data = await res.json();
       } catch {
         throw new Error("AI service returned empty response");
       }
@@ -162,9 +172,6 @@ export default function JobSeekerDashboardClient() {
     }
   }
 
-  // =========================
-  // 🔧 FIXED: Boost to 80+
-  // =========================
   async function handleBoost(r: any) {
     if (!jobDescription?.trim()) {
       alert("Please paste a job description first.");
@@ -181,7 +188,7 @@ export default function JobSeekerDashboardClient() {
     setAiWorking(true);
 
     try {
-      const res = await fetch("/api/ai/boost-to-80", { // 🔧 FIX
+      const res = await fetch("/api/ai/boost-to-80", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -192,7 +199,7 @@ export default function JobSeekerDashboardClient() {
 
       let data: any;
       try {
-        data = await res.json(); // 🔧 FIX (guarded)
+        data = await res.json();
       } catch {
         throw new Error("AI service returned empty response");
       }
@@ -211,7 +218,7 @@ export default function JobSeekerDashboardClient() {
     <>
       <SparkleSuccess trigger={success} />
 
-      {/* ✅ NEW: AI RESULT MODAL (simple + safe, no extra deps) */}
+      {/* AI RESULT MODAL */}
       {aiOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-3xl rounded-2xl bg-white shadow-card border border-slate-200">
@@ -286,10 +293,73 @@ export default function JobSeekerDashboardClient() {
       </header>
 
       <section className="px-4 py-8 space-y-6">
+
+        {/* HERO BANNER */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-brand-canvas via-amber-50 to-rose-50 px-8 py-10 rounded-2xl">
+          <Sparkles className="absolute -right-4 -top-4 h-40 w-40 text-brand-amber/10 rotate-12 pointer-events-none" />
+          <div className="relative flex flex-col md:flex-row items-center justify-between gap-6">
+            <div>
+              <h2 className="font-display text-3xl font-bold text-brand-navy leading-tight">
+                Stand out. Get hired.
+              </h2>
+              <p className="mt-2 text-slate-600 max-w-md">
+                Upload your resume, paste any job description, and get an instant AI-powered match score with personalized improvement tips.
+              </p>
+            </div>
+            <div className="hidden md:flex items-center gap-3 text-brand-navy/60">
+              <div className="flex flex-col items-center gap-1">
+                <ClipboardList className="h-8 w-8 text-brand-amber" />
+                <span className="text-xs font-medium">Paste JD</span>
+              </div>
+              <ArrowRight className="h-5 w-5" />
+              <div className="flex flex-col items-center gap-1">
+                <FileUp className="h-8 w-8 text-brand-amber" />
+                <span className="text-xs font-medium">Upload Resume</span>
+              </div>
+              <ArrowRight className="h-5 w-5" />
+              <div className="flex flex-col items-center gap-1">
+                <Target className="h-8 w-8 text-brand-amber" />
+                <span className="text-xs font-medium">Get Score</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* HOW IT WORKS */}
+        <div className="grid md:grid-cols-3 gap-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-amber text-brand-navy text-xs font-bold">1</span>
+              <ClipboardList className="h-5 w-5 text-brand-amber" />
+            </div>
+            <p className="font-semibold text-slate-800 text-sm">Paste the Job Description</p>
+            <p className="mt-1 text-xs text-slate-500">Copy the JD from any job board and paste it in the text area.</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-amber text-brand-navy text-xs font-bold">2</span>
+              <FileUp className="h-5 w-5 text-brand-amber" />
+            </div>
+            <p className="font-semibold text-slate-800 text-sm">Upload Your Resume</p>
+            <p className="mt-1 text-xs text-slate-500">Upload your resume as PDF, DOCX, or DOC.</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-amber text-brand-navy text-xs font-bold">3</span>
+              <Target className="h-5 w-5 text-brand-amber" />
+            </div>
+            <p className="font-semibold text-slate-800 text-sm">Get Your Match Score</p>
+            <p className="mt-1 text-xs text-slate-500">Receive an instant score, strengths, gaps, and AI-powered suggestions.</p>
+          </div>
+        </div>
+
         {/* INPUT CARD */}
-        <Card>
+        <Card variant="light-gradient">
           <CardHeader>
-            <CardTitle>Your Resume Match Analysis</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-brand-amber" />
+              Your Resume Match Analysis
+            </CardTitle>
           </CardHeader>
 
           <CardContent className="grid md:grid-cols-2 gap-6">
@@ -305,17 +375,22 @@ export default function JobSeekerDashboardClient() {
               className="border-dashed border-2 border-slate-300 hover:border-brand-amber p-6 text-center rounded-2xl cursor-pointer transition-colors"
             >
               <input {...getInputProps()} />
-              <Upload className="mx-auto mb-2 text-brand-amber" />
-              <p className="text-sm">Upload your resume (PDF/DOCX/DOC)</p>
-
-              {files.length > 0 && (
-                <div className="mt-3 text-xs text-slate-600">
-                  <p className="font-medium mb-1">Uploaded resumes:</p>
-                  <ul className="list-disc ml-5">
-                    {files.map((f, i) => (
-                      <li key={i}>{f.name}</li>
-                    ))}
-                  </ul>
+              {files.length === 0 ? (
+                <>
+                  <UploadCloud className="mx-auto mb-2 h-10 w-10 text-brand-amber/60" />
+                  <p className="text-sm text-slate-600">Drop your resume here or click to browse</p>
+                  <p className="mt-1 text-xs text-slate-400">PDF, DOCX, or DOC</p>
+                </>
+              ) : (
+                <div className="flex flex-col items-center gap-2">
+                  <CheckCircle2 className="h-10 w-10 text-emerald-500" />
+                  <p className="text-sm font-medium text-slate-700 truncate max-w-[200px]">
+                    {files[0].name}
+                  </p>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Ready
+                  </span>
                 </div>
               )}
             </div>
@@ -325,7 +400,7 @@ export default function JobSeekerDashboardClient() {
             <Button
               onClick={handleUpload}
               variant="brand-dark"
-              className="w-full"
+              className={`w-full ${files.length > 0 && !loading ? "animate-pulse-soft" : ""}`}
             >
               {loading ? (
                 <Loader2 className="animate-spin h-4 w-4" />
@@ -351,6 +426,14 @@ export default function JobSeekerDashboardClient() {
           <Card>
             <CardHeader>
               <CardTitle>Your Match Results</CardTitle>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-amber/10 px-3 py-1 text-xs font-medium text-brand-navy">
+                  {results.length} resume{results.length !== 1 ? "s" : ""} analyzed
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+                  Avg: {(results.reduce((sum, r) => sum + r.score * 100, 0) / results.length).toFixed(1)}%
+                </span>
+              </div>
             </CardHeader>
 
             <CardContent className="overflow-x-auto">
@@ -373,7 +456,12 @@ export default function JobSeekerDashboardClient() {
                     return (
                       <TableRow key={i} className="align-top hover:bg-brand-canvas">
                         <TableCell className="font-medium">
-                          {r.candidate_name || r.file_name || "Resume"}
+                          <div className="flex items-center gap-2">
+                            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-amber/20 text-brand-navy text-xs font-bold shrink-0">
+                              {(r.candidate_name || r.file_name || "R").charAt(0).toUpperCase()}
+                            </span>
+                            <span className="truncate">{r.candidate_name || r.file_name || "Resume"}</span>
+                          </div>
                         </TableCell>
 
                         <TableCell className="whitespace-normal break-words">
@@ -394,8 +482,15 @@ export default function JobSeekerDashboardClient() {
 
                         <TableCell className="text-center align-top">
                           <span
-                            className={`inline-block px-2 py-1 rounded text-xs font-medium ${info.className}`}
+                            className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${info.className}`}
                           >
+                            {pct >= 85 ? (
+                              <CheckCircle2 className="h-3 w-3" />
+                            ) : pct >= 60 ? (
+                              <TrendingUp className="h-3 w-3" />
+                            ) : (
+                              <AlertCircle className="h-3 w-3" />
+                            )}
                             {pct.toFixed(1)}%
                           </span>
                         </TableCell>
