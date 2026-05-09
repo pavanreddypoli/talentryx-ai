@@ -12,30 +12,20 @@ export default function AfterLoginClient() {
 
   useEffect(() => {
     async function sync() {
-      const roleFromQuery =
-        searchParams.get("role") === "job_seeker"
-          ? "job_seeker"
-          : "recruiter";
+      const roleFromQuery = searchParams.get("role") as "recruiter" | "job_seeker" | null;
 
-      const roleFromStorage =
-        typeof window !== "undefined"
-          ? localStorage.getItem("talentryx_user_type")
-          : null;
-
-      const effectiveRole = roleFromQuery || roleFromStorage || "recruiter";
-
-      // 🔑 NEW: get authenticated user (needed for signup flow)
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
-      // 🔄 Sync user + role into Supabase DB
-      if (user?.email) {
+      // Signup flow only: role param present means a new account is being created.
+      // Login flow has no role param — skip sync-user to prevent role accumulation.
+      if (roleFromQuery && user?.email) {
         await fetch("/api/sync-user", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-user-type": effectiveRole,
+            "x-user-type": roleFromQuery,
           },
           body: JSON.stringify({
             email: user.email,
@@ -49,6 +39,13 @@ export default function AfterLoginClient() {
       // 🔐 Fetch authoritative role from backend
       const res = await fetch("/api/me");
       const data = await res.json();
+
+      if (res.status === 404) {
+        // TODO(Issue 4.1): auth account exists but no public.users row.
+        // Redirect to signup so the user can re-run sync-user and create their row.
+        router.push("/signup");
+        return;
+      }
 
       // 🚀 Redirect based on ACTIVE ROLE
       if (data?.active_role === "job_seeker") {

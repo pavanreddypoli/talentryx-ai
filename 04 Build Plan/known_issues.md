@@ -275,6 +275,20 @@ The 5 unsynced auth users are a separate problem (Issue 3 downstream effect) and
 
 ---
 
+## Issue 4.1 — No-context redirect to /signup for auth-but-no-users-row state
+
+**Discovered:** 2026-05-08 during fix(auth) login role picker removal.
+
+**Symptom:** When a user with a valid Supabase Auth session but no `public.users` row hits `/after-login` (login flow, no role query param), `/api/me` returns 404, and `AfterLoginClient` redirects them to `/signup` with no explanation. The signup page shows "Create a new account" — confusing for a user who already has credentials.
+
+**Root cause:** Issue 4 (orphaned auth rows) produces this state. The `/signup` redirect is intentional — submitting the signup form will re-run `sync-user` and create the missing `public.users` row, resolving the account. But the UX is silent.
+
+**Recommended fix:** Before redirecting, show a brief banner: "We need to finish setting up your account — please complete signup." Low effort — one query param passed to `/signup` and a conditional banner on the signup page.
+
+**Priority:** Low — depends on Issue 4 being the trigger. No current users land in this state via the normal signup flow. Fix alongside Issue 4 remediation.
+
+---
+
 ## ✅ Resolved — 2026-05-07
 
 ## Issue 2 — `/api/rank` never persists to `ranking_sessions` (history always empty)

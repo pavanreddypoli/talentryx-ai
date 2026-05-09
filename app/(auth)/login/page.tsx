@@ -14,10 +14,6 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-  // ✅ NEW: role selection state
-  const [role, setRole] = useState<"recruiter" | "job_seeker">("recruiter");
-
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -26,12 +22,11 @@ export default function LoginPage() {
     const checkSession = async () => {
       const { data } = await supabase.auth.getUser();
       if (data?.user) {
-        // go through after-login so role logic is consistent
-        router.push(`/after-login?role=${role}`);
+        router.push("/after-login");
       }
     };
     checkSession();
-  }, [router, supabase, role]);
+  }, [router, supabase]);
 
   const handleLogin = async (e: any) => {
     e.preventDefault();
@@ -56,8 +51,7 @@ export default function LoginPage() {
       return;
     }
 
-    // ✅ Redirect with explicit role intent
-    router.push(`/after-login?role=${role}`);
+    router.push("/after-login");
   };
 
   return (
@@ -96,37 +90,6 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
           />
-
-          {/* 🔑 ROLE SELECTION — segmented control */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-white/70">
-              I am signing in as
-            </label>
-            <div className="flex gap-1 p-1 bg-white/5 border border-white/10 rounded-full">
-              <button
-                type="button"
-                onClick={() => setRole("recruiter")}
-                className={`flex-1 rounded-full px-4 py-1.5 text-sm transition-all ${
-                  role === "recruiter"
-                    ? "bg-brand-amber text-brand-navy font-semibold"
-                    : "bg-white/5 border border-white/20 text-white/70 hover:bg-white/10"
-                }`}
-              >
-                Recruiter
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole("job_seeker")}
-                className={`flex-1 rounded-full px-4 py-1.5 text-sm transition-all ${
-                  role === "job_seeker"
-                    ? "bg-brand-amber text-brand-navy font-semibold"
-                    : "bg-white/5 border border-white/20 text-white/70 hover:bg-white/10"
-                }`}
-              >
-                Job Seeker
-              </button>
-            </div>
-          </div>
 
           <Button
             type="submit"
