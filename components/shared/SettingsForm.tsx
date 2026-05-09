@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil } from "lucide-react";
+import { Pencil, Briefcase, User, CheckCircle2, Loader2 } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,10 +11,24 @@ type Props = {
   initialFullName: string;
   email: string;
   activeRole: string;   // 'recruiter' | 'job_seeker' — drives badge label
+  roles: string[];      // all roles the user currently holds
   apiEndpoint: string;  // '/api/recruiter/settings' | '/api/job-seeker/settings'
 };
 
-export default function SettingsForm({ initialFullName, email, activeRole, apiEndpoint }: Props) {
+export default function SettingsForm({ initialFullName, email, activeRole, roles, apiEndpoint }: Props) {
+  const [localRoles, setLocalRoles] = useState(roles);
+
+  async function handleAddRole(role: string) {
+    const res = await fetch("/api/me/add-role", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? "Failed to add role");
+    setLocalRoles(data.roles);
+  }
+
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
@@ -27,6 +41,7 @@ export default function SettingsForm({ initialFullName, email, activeRole, apiEn
         activeRole={activeRole}
         apiEndpoint={apiEndpoint}
       />
+      <RolesCard currentRoles={localRoles} onAddRole={handleAddRole} />
       <PasswordCard />
     </div>
   );
@@ -148,6 +163,92 @@ function ProfileCard({
           </span>
           <p className="text-xs text-slate-400">Use the role switcher in the sidebar to change roles.</p>
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Roles card ────────────────────────────────────────────────────────────────
+
+function RolesCard({
+  currentRoles,
+  onAddRole,
+}: {
+  currentRoles: string[];
+  onAddRole: (role: string) => Promise<void>;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [done, setDone] = useState(false);
+  const [addedLabel, setAddedLabel] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const hasRecruiter = currentRoles.includes("recruiter");
+  const hasJobSeeker = currentRoles.includes("job_seeker");
+  const hasAll = hasRecruiter && hasJobSeeker;
+
+  const missingRole = !hasRecruiter ? "recruiter" : !hasJobSeeker ? "job_seeker" : null;
+  const missingLabel = missingRole === "job_seeker" ? "Job Seeker" : "Recruiter";
+
+  async function handleAdd() {
+    if (!missingRole) return;
+    setAdding(true);
+    setError(null);
+    try {
+      await onAddRole(missingRole);
+      setAddedLabel(missingLabel);
+      setDone(true);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Couldn't add role — please try again");
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  return (
+    <Card variant="light-gradient">
+      <CardContent className="py-5 space-y-4">
+        <p className="text-sm font-semibold text-slate-700">Account roles</p>
+
+        <div className="flex flex-wrap gap-2">
+          {(hasRecruiter || done) && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand-amber/10 text-amber-700 border border-brand-amber/30">
+              <Briefcase className="h-3 w-3" /> Recruiter
+            </span>
+          )}
+          {(hasJobSeeker || done) && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-100 text-sky-700 border border-sky-200">
+              <User className="h-3 w-3" /> Job Seeker
+            </span>
+          )}
+        </div>
+
+        {hasAll ? (
+          <p className="text-sm text-slate-500">
+            You have access to both Recruiter and Job Seeker modes.{" "}
+            <span className="text-slate-400">Switch roles via the toggle in the sidebar.</span>
+          </p>
+        ) : done ? (
+          <p className="text-sm text-emerald-600 flex items-center gap-1.5">
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            You can now use Talentryx as a {addedLabel}. Switch via the sidebar.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-slate-600">
+              Want to use Talentryx as a {missingLabel} too?
+            </p>
+            {error && <p className="text-xs text-red-500">{error}</p>}
+            <Button variant="brand-primary" size="sm" onClick={handleAdd} disabled={adding}>
+              {adding ? (
+                <span className="flex items-center gap-1.5">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Adding…
+                </span>
+              ) : (
+                `Also use as ${missingLabel}`
+              )}
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -10,7 +10,7 @@ export default async function SettingsPage() {
 
   const { data: userRow } = await supabase
     .from("users")
-    .select("full_name, email, active_role")
+    .select("full_name, email, active_role, roles")
     .eq("email", authData.user.email!)
     .single();
 
@@ -19,6 +19,7 @@ export default async function SettingsPage() {
       initialFullName={userRow?.full_name ?? ""}
       email={userRow?.email ?? authData.user.email ?? ""}
       activeRole={userRow?.active_role ?? "recruiter"}
+      roles={userRow?.roles ?? [userRow?.active_role ?? "recruiter"]}
     />
   );
 }
