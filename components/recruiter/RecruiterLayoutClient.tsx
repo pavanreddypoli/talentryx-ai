@@ -16,6 +16,7 @@ import {
   X,
   LogOut,
   Sparkles,
+  ShieldCheck,
 } from "lucide-react";
 
 import { useTheme } from "next-themes";
@@ -29,8 +30,16 @@ export default function RecruiterLayoutClient({
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    fetch("/api/me/is-admin")
+      .then((r) => r.json())
+      .then((d) => { if (d.isAdmin) setIsAdmin(true); })
+      .catch(() => {});
+  }, []);
 
   // Client-side role guard: redirect job_seekers off recruiter routes.
   // Skip check when already on a recruiter or job-seeker route — no action needed.
@@ -141,6 +150,19 @@ export default function RecruiterLayoutClient({
             label="Billing"
             icon={<CreditCard className="h-4 w-4" />}
           />
+          {isAdmin && (
+            <>
+              <div className="mt-2 border-t border-slate-200 dark:border-slate-700 pt-2" />
+              <Link
+                href="/admin/discount-codes"
+                onClick={() => setSidebarOpen(false)}
+                className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-brand-amber hover:bg-brand-amber/5 rounded-md transition"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Admin
+              </Link>
+            </>
+          )}
         </nav>
 
         {/* THEME */}

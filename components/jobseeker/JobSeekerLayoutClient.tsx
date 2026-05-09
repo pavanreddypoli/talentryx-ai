@@ -7,7 +7,6 @@ import RoleSwitcher from "@/components/RoleSwitcher";
 
 import {
   LayoutDashboard,
-  FileText,
   History,
   Settings,
   CreditCard,
@@ -17,6 +16,7 @@ import {
   X,
   LogOut,
   Sparkles,
+  ShieldCheck,
 } from "lucide-react";
 
 import { useTheme } from "next-themes";
@@ -30,8 +30,16 @@ export default function JobSeekerLayoutClient({
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    fetch("/api/me/is-admin")
+      .then((r) => r.json())
+      .then((d) => { if (d.isAdmin) setIsAdmin(true); })
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen flex bg-brand-canvas dark:bg-slate-900">
@@ -111,12 +119,6 @@ export default function JobSeekerLayoutClient({
           />
           <SidebarLink
             closeSidebar={() => setSidebarOpen(false)}
-            url="/job-seeker/resumes"
-            label="My Resumes"
-            icon={<FileText className="h-4 w-4" />}
-          />
-          <SidebarLink
-            closeSidebar={() => setSidebarOpen(false)}
             url="/job-seeker/history"
             label="History"
             icon={<History className="h-4 w-4" />}
@@ -133,6 +135,19 @@ export default function JobSeekerLayoutClient({
             label="Billing"
             icon={<CreditCard className="h-4 w-4" />}
           />
+          {isAdmin && (
+            <>
+              <div className="mt-2 border-t border-slate-200 dark:border-slate-700 pt-2" />
+              <Link
+                href="/admin/discount-codes"
+                onClick={() => setSidebarOpen(false)}
+                className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-brand-amber hover:bg-brand-amber/5 rounded-md transition"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Admin
+              </Link>
+            </>
+          )}
         </nav>
 
         {/* THEME */}
