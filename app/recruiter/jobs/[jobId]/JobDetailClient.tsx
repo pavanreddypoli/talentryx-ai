@@ -5,7 +5,8 @@
 
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, X, SlidersHorizontal } from "lucide-react";
+import { ArrowLeft, X, SlidersHorizontal, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { Job, Candidate, FilterState } from "@/lib/recruiter/types";
 import BulkUploadZone from "@/components/recruiter/BulkUploadZone";
 import FiltersSidebar from "@/components/recruiter/FiltersSidebar";
@@ -18,18 +19,25 @@ type Props = {
   initialCandidates: Candidate[];
   jobId: string;
   initialCandidateId: string | null;
+  initialNeedsRerank: boolean;
+  initialStaleCount: number;
 };
 
 const DEFAULT_FILTERS: FilterState = { score: "all", status: "all", search: "" };
 
-export default function JobDetailClient({ initialJob, initialCandidates, jobId, initialCandidateId }: Props) {
+export default function JobDetailClient({ initialJob, initialCandidates, jobId, initialCandidateId, initialNeedsRerank, initialStaleCount }: Props) {
   const [job, setJob] = useState<Job>(initialJob);
   const [candidates, setCandidates] = useState<Candidate[]>(initialCandidates);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [activeCandidate, setActiveCandidate] = useState<Candidate | null>(null);
   const [tableError, setTableError] = useState<string | null>(null);
-  const [showJdChangeBanner, setShowJdChangeBanner] = useState(false);
+  const [needsRerank, setNeedsRerank] = useState(initialNeedsRerank);
+  const [staleCount, setStaleCount] = useState(initialStaleCount);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [rerankModalOpen, setRerankModalOpen] = useState(false);
+  const [isReranking, setIsReranking] = useState(false);
+  const [rerankError, setRerankError] = useState<string | null>(null);
+  const [rerankSuccess, setRerankSuccess] = useState<string | null>(null);
 
   // Auto-dismiss tableError after 4 seconds
   useEffect(() => {
@@ -79,14 +87,43 @@ export default function JobDetailClient({ initialJob, initialCandidates, jobId, 
       });
       if (!res.ok) throw new Error("PATCH failed");
 
-      // Show JD change banner when description changes and candidates exist
+      // Mark candidates stale when JD changes and candidates exist
       if (field === "description" && value !== prevJob.description && candidates.length > 0) {
-        setShowJdChangeBanner(true);
+        setNeedsRerank(true);
+        setStaleCount(candidates.length);
+        setRerankSuccess(null);
       }
     } catch (err) {
       setJob(prevJob); // revert
       setTableError("Couldn't save changes — please try again"); // 4s auto-dismiss
       throw err; // re-throw so EditableJobHeader can show inline field error
+    }
+  }
+
+  // ── Re-rank stale candidates ──────────────────────────────────────────
+  async function handleRerank() {
+    setIsReranking(true);
+    setRerankError(null);
+    try {
+      const res = await fetch(`/api/recruiter/jobs/${jobId}/rerank`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Re-rank failed");
+
+      // Refresh candidates table with updated scores
+      const refreshRes = await fetch(`/api/recruiter/jobs/${jobId}/candidates`);
+      const refreshData = await refreshRes.json();
+      if (refreshRes.ok) setCandidates(refreshData.candidates ?? []);
+
+      setNeedsRerank(false);
+      setStaleCount(0);
+      setRerankModalOpen(false);
+      const count = data.reRanked as number;
+      setRerankSuccess(`Re-ranked ${count} candidate${count !== 1 ? "s" : ""} against the updated JD.`);
+      setTimeout(() => setRerankSuccess(null), 6000);
+    } catch (e: unknown) {
+      setRerankError(e instanceof Error ? e.message : "Re-rank failed — please try again");
+    } finally {
+      setIsReranking(false);
     }
   }
 
@@ -151,22 +188,75 @@ export default function JobDetailClient({ initialJob, initialCandidates, jobId, 
         onRankingComplete={(newCandidates) => setCandidates(newCandidates)}
       />
 
-      {/* JD change banner — files not in Supabase Storage so re-rank is deferred to D6.2 */}
-      {showJdChangeBanner && (
+      {/* Re-rank success toast */}
+      {rerankSuccess && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {rerankSuccess}
+        </div>
+      )}
+
+      {/* JD change banner — shows when stale candidates exist */}
+      {needsRerank && (
         <div className="flex items-start justify-between gap-3 rounded-lg border border-brand-amber/20 bg-brand-amber/5 px-4 py-3 text-sm">
           <p className="text-slate-700">
-            Job description updated. Future uploads will be ranked against the new JD.
-            Existing scores reflect the previous description.
+            Job description updated. Future uploads will be ranked against the new JD.{" "}
+            <button
+              type="button"
+              onClick={() => setRerankModalOpen(true)}
+              className="font-medium text-brand-amber hover:underline transition-colors"
+            >
+              Re-rank previous candidates
+            </button>{" "}
+            to update their scores.
           </p>
           <button
             type="button"
-            onClick={() => setShowJdChangeBanner(false)}
+            onClick={() => setNeedsRerank(false)}
             className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
             aria-label="Dismiss"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
+      )}
+
+      {/* Re-rank confirmation modal */}
+      {rerankModalOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/40 z-50"
+            onClick={() => { if (!isReranking) setRerankModalOpen(false); }}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
+              <h3 className="font-display font-bold text-slate-900 text-lg">Re-rank candidates?</h3>
+              <p className="text-sm text-slate-600">
+                Re-rank {staleCount} candidate{staleCount !== 1 ? "s" : ""} against the updated JD?
+                Their notes and shortlist status will be preserved, but scores and AI insights will be updated.
+              </p>
+              {rerankError && <p className="text-xs text-red-500">{rerankError}</p>}
+              <div className="flex gap-3 justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setRerankModalOpen(false); setRerankError(null); }}
+                  disabled={isReranking}
+                >
+                  Cancel
+                </Button>
+                <Button variant="brand-primary" size="sm" onClick={handleRerank} disabled={isReranking}>
+                  {isReranking ? (
+                    <span className="flex items-center gap-1.5">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Re-ranking…
+                    </span>
+                  ) : (
+                    "Re-rank"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Candidates section */}

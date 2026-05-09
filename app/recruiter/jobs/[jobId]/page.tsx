@@ -25,10 +25,10 @@ export default async function JobDetailPage({ params, searchParams }: Props) {
 
   if (jobErr || !job) notFound();
 
-  // Query 2: session IDs for this job
+  // Query 2: sessions with created_at to detect stale candidates
   const { data: sessions } = await supabase
     .from("ranking_sessions")
-    .select("id")
+    .select("id, created_at")
     .eq("job_id", jobId);
 
   const sessionIds = sessions?.map((s) => s.id) ?? [];
@@ -47,12 +47,22 @@ export default async function JobDetailPage({ params, searchParams }: Props) {
     initialCandidates = (candidates ?? []) as unknown as Candidate[];
   }
 
+  // Compute initial needs-rerank state: sessions ranked against a stale JD
+  const jdUpdatedAt = (job as unknown as Job).jd_updated_at;
+  const staleSessionIds = new Set(
+    sessions?.filter((s) => new Date(s.created_at) < new Date(jdUpdatedAt)).map((s) => s.id) ?? []
+  );
+  const initialStaleCount = initialCandidates.filter((c) => staleSessionIds.has(c.session_id)).length;
+  const initialNeedsRerank = initialStaleCount > 0;
+
   return (
     <JobDetailClient
       initialJob={job as unknown as Job}
       initialCandidates={initialCandidates}
       jobId={jobId}
       initialCandidateId={initialCandidateId ?? null}
+      initialNeedsRerank={initialNeedsRerank}
+      initialStaleCount={initialStaleCount}
     />
   );
 }

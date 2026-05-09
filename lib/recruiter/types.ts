@@ -22,6 +22,8 @@ export type Job = {
   experience_level: string | null;
   status: string;
   created_at: string;
+  updated_at: string;
+  jd_updated_at: string;
   recruiter_id: string;
 };
 

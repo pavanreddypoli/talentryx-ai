@@ -90,7 +90,10 @@ export async function PATCH(req: Request, { params }: Ctx) {
 
   const patch: Record<string, unknown> = {};
   if (title !== undefined) patch.title = title;
-  if (description !== undefined) patch.description = description;
+  if (description !== undefined) {
+    patch.description = description;
+    patch.jd_updated_at = new Date().toISOString();
+  }
   if (location !== undefined) patch.location = location;
   if (experience_level !== undefined) patch.experience_level = experience_level;
   if (status !== undefined) patch.status = status;
