@@ -28,6 +28,12 @@ export default function SignupClient({ incompleteSetup }: Props) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          intended_role: role,
+          full_name: email.split("@")[0],
+        },
+      },
     });
 
     if (error) {

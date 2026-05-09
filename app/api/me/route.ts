@@ -19,11 +19,35 @@ export async function GET(req: Request) {
       .eq("email", email)
       .single();
 
-    if (error || !user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+    // PGRST116 = "no rows returned" — orphaned auth user with no public row.
+    // Self-heal: create the missing row with safe defaults so the user can proceed.
+    if (error?.code === "PGRST116" || (!error && !user)) {
+      const { data: healed, error: healError } = await supabaseAdmin
+        .from("users")
+        .insert({
+          email,
+          full_name: email.split("@")[0],
+          active_role: "recruiter",
+          roles: ["recruiter"],
+          plan: "free",
+        })
+        .select("active_role, is_admin")
+        .single();
+
+      if (healError) {
+        console.error("api/me self-heal error:", healError);
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        active_role: healed?.active_role ?? "recruiter",
+        is_admin: healed?.is_admin ?? false,
+      });
+    }
+
+    if (error) {
+      console.error("api/me error:", error);
+      return NextResponse.json({ error: "Server error" }, { status: 500 });
     }
 
     return NextResponse.json({

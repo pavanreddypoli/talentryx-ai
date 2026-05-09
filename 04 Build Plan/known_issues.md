@@ -246,6 +246,8 @@ The 5 unsynced auth users are a separate problem (Issue 3 downstream effect) and
 
 ---
 
+## ✅ Resolved — 2026-05-09 (Step F10, migration 0011)
+
 ## Issue 4 — Orphaned `auth.users` rows with no `public.users` counterpart
 
 **Discovered:** 2026-05-06 during diagnosis of Finding B (RLS deny-all).
@@ -265,15 +267,34 @@ The 5 unsynced auth users are a separate problem (Issue 3 downstream effect) and
 
 **Root cause:** `public.users` is populated only via `POST /api/sync-user`, which is called from `AfterLoginClient` on the `/after-login` page. Users who were created in Supabase Auth but never completed the `/after-login` flow (or who signed up during an earlier Clerk-based auth period) never had a `sync-user` call made on their behalf.
 
+**Exact failure trace (email confirmation flow):**
+1. `SignupClient` calls `signUp()` — with email confirmation enabled, returns `session: null`
+2. Both branches of `if (data.session)` redirect to `/after-login?role=X` (dead branch — same code either way)
+3. `AfterLoginClient` calls `supabase.auth.getUser()` — returns null (no session yet) → sync-user skipped
+4. After email confirmation, Supabase redirects to SITE_URL with no `?role=` param → roleFromQuery is null → sync-user skipped again
+5. `/api/me` returns 404 → user stuck at `/signup?reason=incomplete_setup`
+
 **Why this is separate from Finding B:** Finding B (resolved) was a blanket deny-all caused by zero RLS policies. Issue 4 is a data gap — the authenticated session is valid, the policy permits the read, but the row does not exist. These are independent problems; B-i fixed B, not 4.
 
-**Recommended fix (two-part):**
-1. **Backfill:** For each affected email, insert a row into `public.users` with a default `active_role` (`recruiter` or `job_seeker` as appropriate), plus a corresponding `organizations` + `organization_members` row to satisfy any NOT NULL FK constraints. Use `supabaseAdmin` in a one-time migration or Supabase dashboard SQL.
-2. **Prevention:** Add a Supabase Auth webhook or database trigger on `auth.users` INSERT that calls `sync-user` (or directly inserts into `public.users`) so future sign-ups are always synced regardless of whether they hit the `/after-login` page.
+**Fix applied (2026-05-09, Step F10):** Three-layer defence:
 
-**Note:** The two typo accounts (`gamail.com`, `pavsnkumarreddy`) are probably test/accident accounts and may be safe to leave unsynced or delete from `auth.users` directly.
+1. **Migration 0011 — DB trigger:** Two triggers on `auth.users` that auto-create a `public.users` row via `public.handle_new_auth_user()`:
+   - `on_auth_user_created` — fires on INSERT when `email_confirmed_at IS NOT NULL` (instant-confirm / email-confirmation-disabled case)
+   - `on_auth_user_email_confirmed` — fires on UPDATE when `email_confirmed_at` transitions NULL → non-NULL (confirmation-email click case)
+   - Both use `ON CONFLICT (email) DO NOTHING` — idempotent, safe for existing users
+   - Reads `intended_role` from `raw_user_meta_data` so new signups get the correct role
+
+2. **`/api/me` self-heal:** When the email is present (valid session) but no public.users row exists (PGRST116), auto-inserts a row with `active_role='recruiter'` defaults instead of returning 404. Heals any historical orphan on their next login without any user-visible failure.
+
+3. **Migration 0011 backfill:** One-time INSERT for confirmed auth users with no public row. Healed `cheppanupobro@gmail.com` (active_role='recruiter'). The 3 unconfirmed orphans (2 typo accounts + 1 unverified) cannot log in — they'll be healed by the self-heal layer if they ever confirm.
+
+4. **`SignupClient` metadata:** `signUp()` now passes `options.data.intended_role` and `options.data.full_name` into `raw_user_meta_data`, so the trigger reads accurate values for new signups.
+
+**Verified (2026-05-09):** All 3 confirmed auth users have matching public rows. No NULLs in `public_email` column. Triggers confirmed in `information_schema.triggers`.
 
 ---
+
+## ✅ Resolved — 2026-05-09 (Step F10)
 
 ## Issue 4.1 — No-context redirect to /signup for auth-but-no-users-row state
 
@@ -283,11 +304,9 @@ The 5 unsynced auth users are a separate problem (Issue 3 downstream effect) and
 
 **Root cause:** Issue 4 (orphaned auth rows) produces this state. The `/signup` redirect is intentional — submitting the signup form will re-run `sync-user` and create the missing `public.users` row, resolving the account. But the UX is silent.
 
-**Recommended fix:** Before redirecting, show a brief banner: "We need to finish setting up your account — please complete signup." Low effort — one query param passed to `/signup` and a conditional banner on the signup page.
+**UX improvement applied (2026-05-08, Step F5):** `AfterLoginClient` now redirects to `/signup?reason=incomplete_setup`. `app/(auth)/signup/page.tsx` reads the `reason` param and shows a banner: "We need to finish setting up your account. Please confirm your role to continue."
 
-**Priority:** Low — depends on Issue 4 being the trigger. No current users land in this state via the normal signup flow. Fix alongside Issue 4 remediation.
-
-**UX improvement applied (2026-05-08, Step F5):** `AfterLoginClient` now redirects to `/signup?reason=incomplete_setup`. `app/(auth)/signup/page.tsx` reads the `reason` param and shows a banner: "We need to finish setting up your account. Please confirm your role to continue." Underlying Issue 4 (orphaned rows) is still unresolved.
+**Fully resolved (2026-05-09, Step F10):** The underlying orphaned-row state that triggers this redirect no longer occurs. The `/api/me` self-heal (Issue 4 fix, layer 2) auto-creates the public.users row instead of returning 404, so `AfterLoginClient` never reaches the incomplete_setup redirect for any confirmed auth user. The `?reason=incomplete_setup` path remains in code as a fallback but is now unreachable under normal conditions.
 
 ---
 
