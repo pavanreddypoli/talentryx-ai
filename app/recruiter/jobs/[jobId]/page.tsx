@@ -5,10 +5,12 @@ import type { Job, Candidate } from "@/lib/recruiter/types";
 
 type Props = {
   params: Promise<{ jobId: string }>;
+  searchParams: Promise<{ candidate?: string }>;
 };
 
-export default async function JobDetailPage({ params }: Props) {
+export default async function JobDetailPage({ params, searchParams }: Props) {
   const { jobId } = await params;
+  const { candidate: initialCandidateId } = await searchParams;
   const supabase = await createSupabaseServerClient();
 
   const { data: authData } = await supabase.auth.getUser();
@@ -50,6 +52,7 @@ export default async function JobDetailPage({ params }: Props) {
       initialJob={job as unknown as Job}
       initialCandidates={initialCandidates}
       jobId={jobId}
+      initialCandidateId={initialCandidateId ?? null}
     />
   );
 }

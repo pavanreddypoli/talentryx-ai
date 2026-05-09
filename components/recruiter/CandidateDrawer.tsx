@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Star, XCircle, Share2, FileText } from "lucide-react";
+import { X, Star, XCircle, Share2, Check, FileText } from "lucide-react";
 import type { Candidate } from "@/lib/recruiter/types";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -97,6 +97,7 @@ export default function CandidateDrawer({
   const [notes, setNotes] = useState(candidate?.recruiter_notes ?? "");
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [isLoadingResume, setIsLoadingResume] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   if (!candidate) return null;
 
@@ -122,6 +123,14 @@ export default function CandidateDrawer({
     } finally {
       setIsLoadingResume(false);
     }
+  }
+
+  function handleShare() {
+    const url = `${window.location.origin}/recruiter/jobs/${jobId}?candidate=${candidate.id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
   }
 
   const scorePct = Math.round(candidate.score * 100);
@@ -267,16 +276,14 @@ export default function CandidateDrawer({
             <XCircle className="h-4 w-4" />
             Reject
           </Button>
-          {/* Share — stub, deferred to D7.1 */}
           <Button
             variant="outline"
             size="sm"
-            disabled
-            className="ml-auto opacity-50 cursor-not-allowed"
-            title="Share — coming in D7.1"
+            onClick={handleShare}
+            className="ml-auto"
           >
-            <Share2 className="h-4 w-4" />
-            Share
+            {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Share2 className="h-4 w-4" />}
+            {copied ? "Copied!" : "Share"}
           </Button>
         </div>
       </div>

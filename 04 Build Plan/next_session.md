@@ -17,13 +17,8 @@ Sidebar: update Billing link `/dashboard/billing` → `/recruiter/billing` (same
 
 ---
 
-## D7.1 — Share button deep-link (deferred)
-The Share button in the candidate drawer is a stub (`disabled`, title="Share — coming in D7.1"). When built:
-- Generate a short-lived share token or signed URL for the candidate profile
-- Route: `/recruiter/jobs/[jobId]/candidates/[candidateId]/share` or a token-based viewer
-- Scope: read-only view of name, score, strengths, gaps — no notes, no status controls
-- Auth model: unauthenticated viewer (link sharing), token in URL, expiry TBD
-- Pick up in D7.1 when share flow is scoped
+## ✅ D7.1 — Share button deep-link (resolved 2026-05-08, Step F6)
+Share button in CandidateDrawer now copies `${origin}/recruiter/jobs/${jobId}?candidate=${candidateId}` to clipboard, shows "Copied!" + green check for 2s, then resets. JobDetailClient reads the `candidate` search param (passed as `initialCandidateId` prop from the server component) and auto-opens the drawer on page load. No new routes, no auth changes, no DB changes.
 
 ---
 

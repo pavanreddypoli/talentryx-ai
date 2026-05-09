@@ -17,11 +17,12 @@ type Props = {
   initialJob: Job;
   initialCandidates: Candidate[];
   jobId: string;
+  initialCandidateId: string | null;
 };
 
 const DEFAULT_FILTERS: FilterState = { score: "all", status: "all", search: "" };
 
-export default function JobDetailClient({ initialJob, initialCandidates, jobId }: Props) {
+export default function JobDetailClient({ initialJob, initialCandidates, jobId, initialCandidateId }: Props) {
   const [job, setJob] = useState<Job>(initialJob);
   const [candidates, setCandidates] = useState<Candidate[]>(initialCandidates);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
@@ -36,6 +37,13 @@ export default function JobDetailClient({ initialJob, initialCandidates, jobId }
     const t = setTimeout(() => setTableError(null), 4000);
     return () => clearTimeout(t);
   }, [tableError]);
+
+  // Auto-open drawer when a ?candidate= deep-link param is present
+  useEffect(() => {
+    if (!initialCandidateId) return;
+    const match = initialCandidates.find((c) => c.id === initialCandidateId);
+    if (match) setActiveCandidate(match);
+  }, [initialCandidateId, initialCandidates]);
 
   const filteredCandidates = useMemo(() => {
     return candidates.filter((c) => {
