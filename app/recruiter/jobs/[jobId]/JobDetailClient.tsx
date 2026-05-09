@@ -5,7 +5,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, X } from "lucide-react";
+import { ArrowLeft, X, SlidersHorizontal } from "lucide-react";
 import type { Job, Candidate, FilterState } from "@/lib/recruiter/types";
 import BulkUploadZone from "@/components/recruiter/BulkUploadZone";
 import FiltersSidebar from "@/components/recruiter/FiltersSidebar";
@@ -28,6 +28,7 @@ export default function JobDetailClient({ initialJob, initialCandidates, jobId }
   const [activeCandidate, setActiveCandidate] = useState<Candidate | null>(null);
   const [tableError, setTableError] = useState<string | null>(null);
   const [showJdChangeBanner, setShowJdChangeBanner] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Auto-dismiss tableError after 4 seconds
   useEffect(() => {
@@ -168,18 +169,36 @@ export default function JobDetailClient({ initialJob, initialCandidates, jobId }
           </p>
         </div>
       ) : (
-        <div className="flex gap-6 items-start">
-          <aside className="w-52 shrink-0">
-            <FiltersSidebar filters={filters} onChange={setFilters} />
-          </aside>
-          <div className="flex-1 min-w-0">
-            <CandidateTable
-              candidates={filteredCandidates}
-              onView={setActiveCandidate}
-              tableError={tableError}
-            />
+        <>
+          {/* Mobile filters trigger — hidden on md+ where sidebar is always visible */}
+          <div className="md:hidden">
+            <button
+              onClick={() => setFiltersOpen(true)}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              Filters
+              {(filters.score !== "all" || filters.status !== "all" || filters.search !== "") && (
+                <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-brand-amber text-brand-navy text-[10px] font-bold">
+                  {(filters.score !== "all" ? 1 : 0) + (filters.status !== "all" ? 1 : 0) + (filters.search !== "" ? 1 : 0)}
+                </span>
+              )}
+            </button>
           </div>
-        </div>
+
+          <div className="flex gap-6 items-start">
+            <aside className="hidden md:block w-52 shrink-0">
+              <FiltersSidebar filters={filters} onChange={setFilters} />
+            </aside>
+            <div className="flex-1 min-w-0">
+              <CandidateTable
+                candidates={filteredCandidates}
+                onView={setActiveCandidate}
+                tableError={tableError}
+              />
+            </div>
+          </div>
+        </>
       )}
 
       {/* Candidate detail drawer — key remounts on candidate change, resetting notes state */}
@@ -191,6 +210,31 @@ export default function JobDetailClient({ initialJob, initialCandidates, jobId }
         onStatusChange={handleStatusChange}
         onNotesChange={handleNotesChange}
       />
+
+      {/* Mobile filters drawer */}
+      {filtersOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/40 z-40 md:hidden"
+            onClick={() => setFiltersOpen(false)}
+          />
+          <div className="fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl flex flex-col md:hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <span className="font-semibold text-slate-900">Filters</span>
+              <button
+                onClick={() => setFiltersOpen(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+                aria-label="Close filters"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5">
+              <FiltersSidebar filters={filters} onChange={setFilters} />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
