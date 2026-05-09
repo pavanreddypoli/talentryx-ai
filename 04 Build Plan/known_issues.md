@@ -402,6 +402,8 @@ The codebase maintains two separate user-identity tables: `public.users` stores 
 
 ---
 
+## ✅ Resolved — 2026-05-09 (Step F8, migration 0009)
+
 ## Issue 10 — Supabase Storage `resumes` bucket SELECT policy is too permissive
 
 **Discovered:** 2026-05-08 during D7 file-persistence investigation.
@@ -431,6 +433,8 @@ CREATE POLICY "resumes: owner read only"
 **Affected files:**
 - Upload path set in `app/api/rank/route.ts` — `${session.user.id}/...`
 - Signed URL issued by `app/api/recruiter/jobs/[jobId]/candidates/[candidateId]/resume/route.ts`
+
+**Fix applied (2026-05-09, Step F8):** `supabase/migrations/0009_tighten_storage_resumes_select.sql` — dropped `"Policy: Allow users to read only their files"` (which despite its name allowed any authenticated user to read any file) and replaced with `resumes_owner_select` scoped to `split_part(name, '/', 1) = auth.uid()::text`. Both app storage routes use `supabaseAdmin` (service role bypasses RLS) — zero impact on existing signed-URL or upload flows. Closes the direct-URL access gap.
 
 ---
 
