@@ -150,7 +150,7 @@ export default function HomePage() {
             >
               Rank resumes in <em className="text-amber-300 italic">minutes</em>.
               <br />
-              Boost yours in <em className="text-amber-300 italic">seconds</em>.
+              Land your next role in <em className="text-amber-300 italic">seconds</em>.
             </h1>
 
             <p
@@ -462,7 +462,7 @@ export default function HomePage() {
                 icon: BrainCircuit,
                 tone: "from-amber-400 to-orange-500",
                 title: "AI ranks by true fit",
-                body: "Semantic match on skills, experience, and progression — not just keyword overlap. Each candidate gets a score with reasoning.",
+                body: "Semantic match on skills, experience, and progression — not just keyword overlap. Each candidate gets a score with reasoning — or paste your own resume to see how you'd rank.",
               },
               {
                 num: "03",
@@ -673,24 +673,24 @@ export default function HomePage() {
                   See the difference yourself.
                 </h2>
                 <p className="mt-5 text-base text-white/70 max-w-xl leading-relaxed">
-                  Upload one job description and a few resumes. Have your first ranked shortlist
-                  before your coffee gets cold.
+                  Recruiters get their first ranked shortlist before their coffee gets cold.
+                  Job seekers see exactly how they stack up and what to fix — in seconds.
                 </p>
               </div>
 
               <div className="flex flex-col gap-3">
                 <Link
-                  href="/signup"
+                  href="/signup?role=recruiter"
                   className="group inline-flex items-center justify-center gap-2 rounded-full bg-amber-400 px-7 py-4 text-sm font-bold text-brand-navy hover:bg-amber-300 transition-all shadow-cta-lg hover:shadow-cta-hover"
                 >
-                  Get started free
+                  I&apos;m hiring
                   <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
                 </Link>
                 <Link
-                  href="/login"
+                  href="/signup?role=job_seeker"
                   className="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 bg-white/5 px-7 py-4 text-sm font-semibold text-white hover:bg-white/10 transition-all backdrop-blur-sm"
                 >
-                  I already have an account
+                  I&apos;m job hunting →
                 </Link>
               </div>
             </div>
