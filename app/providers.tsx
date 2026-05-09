@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { ThemeProvider } from "next-themes";
 import { createSupabaseBrowserClient } from "@/lib/supabaseClient";
 
 type SupabaseContextType = {
@@ -36,9 +37,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   }, [supabase]);
 
   return (
-    <SupabaseContext.Provider value={{ supabase, session }}>
-      {children}
-    </SupabaseContext.Provider>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <SupabaseContext.Provider value={{ supabase, session }}>
+        {children}
+      </SupabaseContext.Provider>
+    </ThemeProvider>
   );
 }
 

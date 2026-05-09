@@ -7,6 +7,16 @@ import HistoryDetailClient from "./HistoryDetailClient";
 
 type Params = Promise<{ sessionId: string }>;
 
+// Heuristic — not guaranteed to match all JD formats.
+function parseJobTitle(jd: string): string {
+  const firstLine = jd.split("\n")[0].trim();
+  if (firstLine.length > 0 && firstLine.length <= 80) return firstLine;
+  const head = jd.slice(0, 100);
+  const colonIdx = head.search(/[:—–——–-]/);
+  if (colonIdx > 5 && colonIdx < 80) return head.slice(0, colonIdx).trim();
+  return jd.slice(0, 60).trim() + (jd.length > 60 ? "…" : "");
+}
+
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleString("en-US", {
     month: "short",
@@ -47,10 +57,7 @@ export default async function HistoryDetailPage({ params }: { params: Params }) 
   }[];
   const result = results?.[0] ?? null;
 
-  // TODO: parse job title from JD using AI or regex pattern matching for cleaner display titles. Polish item.
-  const displayTitle =
-    session.job_description.slice(0, 60).trim() +
-    (session.job_description.length > 60 ? "…" : "");
+  const displayTitle = parseJobTitle(session.job_description);
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">

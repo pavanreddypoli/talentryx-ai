@@ -287,6 +287,8 @@ The 5 unsynced auth users are a separate problem (Issue 3 downstream effect) and
 
 **Priority:** Low — depends on Issue 4 being the trigger. No current users land in this state via the normal signup flow. Fix alongside Issue 4 remediation.
 
+**UX improvement applied (2026-05-08, Step F5):** `AfterLoginClient` now redirects to `/signup?reason=incomplete_setup`. `app/(auth)/signup/page.tsx` reads the `reason` param and shows a banner: "We need to finish setting up your account. Please confirm your role to continue." Underlying Issue 4 (orphaned rows) is still unresolved.
+
 ---
 
 ## ✅ Resolved — 2026-05-07
@@ -332,6 +334,8 @@ The codebase maintains two separate user-identity tables: `public.users` stores 
 
 ---
 
+## ✅ Resolved — 2026-05-08 (Step F5)
+
 ## Issue 7 — Theme toggle button is non-functional — ThemeProvider never wired up
 
 **Discovered:** 2026-05-07 during localhost verification of the dashboard sidebar redesign (Step 8).
@@ -351,6 +355,8 @@ The codebase maintains two separate user-identity tables: `public.users` stores 
 
 **Priority:** Low — this feature has never worked in any deployed version; no user is depending on it. Roll into the next dark-mode pass when other dashboard pages are redesigned for dark mode.
 
+**Fix applied (2026-05-08, Step F5):** `app/providers.tsx` — added `ThemeProvider` from `next-themes` wrapping `SupabaseContext.Provider` with `attribute="class" defaultTheme="system" enableSystem`. `app/layout.tsx` — added `suppressHydrationWarning` to `<html>` tag. Theme toggle now functional.
+
 ---
 
 ## ✅ Resolved — 2026-05-08
@@ -367,6 +373,18 @@ The codebase maintains two separate user-identity tables: `public.users` stores 
 - `app/api/rank/route.ts` still uses `getSession()` — low risk (non-payment flow), deferred to a future hardening pass
 
 **Verified:** No regressions. `getUser()` returns the same `user.id` for valid sessions.
+
+---
+
+## ✅ Resolved — 2026-05-08 (Step F5)
+
+## Issue 8 — `/api/admin/check-admin` returning 404, flooding dev server logs
+
+**Discovered:** 2026-05-08 during F5 polish audit.
+
+**Symptom:** Some client-side code (source not found in codebase — likely a browser extension or leftover devtools check) was making `GET /api/admin/check-admin` requests on every render. No route existed, producing 404 responses that cluttered the dev server log.
+
+**Fix applied (2026-05-08, Step F5):** Created stub route `app/api/admin/check-admin/route.ts` returning `{ isAdmin: false }` with a 200 status. Eliminates the 404 noise without removing any real functionality.
 
 ---
 

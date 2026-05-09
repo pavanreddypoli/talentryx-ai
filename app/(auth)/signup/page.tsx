@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,8 @@ import { Sparkles } from "lucide-react";
 export default function SignupPage() {
   const supabase = createSupabaseBrowserClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const incompleteSetup = searchParams.get("reason") === "incomplete_setup";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -55,6 +57,12 @@ export default function SignupPage() {
             Create a new account
           </p>
         </div>
+
+        {incompleteSetup && (
+          <div className="mb-4 rounded-xl border border-brand-amber/30 bg-brand-amber/10 px-4 py-3 text-sm text-brand-amber">
+            We need to finish setting up your account. Please confirm your role to continue.
+          </div>
+        )}
 
         <form onSubmit={handleSignup} className="space-y-4">
           {error && <p className="text-red-300 text-sm text-center">{error}</p>}

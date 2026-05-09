@@ -41,9 +41,7 @@ export default function AfterLoginClient() {
       const data = await res.json();
 
       if (res.status === 404) {
-        // TODO(Issue 4.1): auth account exists but no public.users row.
-        // Redirect to signup so the user can re-run sync-user and create their row.
-        router.push("/signup");
+        router.push("/signup?reason=incomplete_setup");
         return;
       }
 

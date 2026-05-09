@@ -16,13 +16,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [alreadySignedIn, setAlreadySignedIn] = useState(false);
 
-  // 🔒 Auto-redirect if already logged in
   useEffect(() => {
     const checkSession = async () => {
       const { data } = await supabase.auth.getUser();
       if (data?.user) {
-        router.push("/after-login");
+        setAlreadySignedIn(true);
+        setTimeout(() => router.push("/after-login"), 800);
       }
     };
     checkSession();
@@ -53,6 +54,17 @@ export default function LoginPage() {
 
     router.push("/after-login");
   };
+
+  if (alreadySignedIn) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-brand-navy bg-hero-mesh">
+        <div className="text-center">
+          <Sparkles className="h-8 w-8 text-brand-amber mx-auto mb-4" />
+          <p className="text-white font-medium">You&apos;re already signed in — redirecting to your dashboard…</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-brand-navy bg-hero-mesh">
