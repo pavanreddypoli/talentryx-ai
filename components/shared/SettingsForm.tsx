@@ -6,6 +6,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import PasswordInput from "@/components/shared/PasswordInput";
 
 type Props = {
   initialFullName: string;
@@ -311,14 +312,14 @@ function PasswordCard() {
             <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
               Current password
             </label>
-            <Input type="password" value={current} onChange={(e) => setCurrent(e.target.value)}
+            <PasswordInput value={current} onChange={(e) => setCurrent(e.target.value)}
               autoComplete="current-password" required />
           </div>
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
               New password
             </label>
-            <Input type="password" value={next} onChange={(e) => setNext(e.target.value)}
+            <PasswordInput value={next} onChange={(e) => setNext(e.target.value)}
               autoComplete="new-password" minLength={8} required />
             <p className="text-xs text-slate-400">Minimum 8 characters</p>
           </div>
@@ -326,7 +327,7 @@ function PasswordCard() {
             <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
               Confirm new password
             </label>
-            <Input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)}
+            <PasswordInput value={confirm} onChange={(e) => setConfirm(e.target.value)}
               autoComplete="new-password" required />
           </div>
 

@@ -18,6 +18,7 @@ import {
   Sparkles,
   ShieldCheck,
 } from "lucide-react";
+import BrandLogo from "@/components/shared/BrandLogo";
 
 import { useTheme } from "next-themes";
 
@@ -46,12 +47,7 @@ export default function JobSeekerLayoutClient({
 
       {/* MOBILE NAVBAR */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-brand-amber" />
-          <span className="font-display font-bold text-slate-800 dark:text-slate-100 text-lg">
-            Talentryx AI
-          </span>
-        </div>
+        <BrandLogo href="/job-seeker/dashboard" className="text-slate-800 dark:text-slate-100" />
         <div className="flex items-center gap-3">
           <RoleSwitcher />
           <button
@@ -86,12 +82,7 @@ export default function JobSeekerLayoutClient({
         {/* HEADER */}
         <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
           <div>
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-brand-amber" />
-              <h1 className="text-xl font-display font-bold text-slate-800 dark:text-slate-100">
-                Talentryx AI
-              </h1>
-            </div>
+            <BrandLogo href="/job-seeker/dashboard" className="text-slate-800 dark:text-slate-100" />
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               AI Career Tools
             </p>

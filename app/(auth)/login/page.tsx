@@ -6,7 +6,9 @@ import { createSupabaseBrowserClient } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
+import { ArrowLeft, Sparkles } from "lucide-react";
+import PasswordInput from "@/components/shared/PasswordInput";
+import BrandLogo from "@/components/shared/BrandLogo";
 
 export default function LoginPage() {
   const supabase = createSupabaseBrowserClient();
@@ -67,15 +69,19 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-brand-navy bg-hero-mesh">
+    <div className="relative min-h-screen flex items-center justify-center p-6 bg-brand-navy bg-hero-mesh">
+      <Link href="/" className="absolute top-6 left-6 inline-flex items-center gap-1 text-sm text-white/70 hover:text-white transition-colors">
+        <ArrowLeft className="h-4 w-4" />
+        Back to home
+      </Link>
+
       <div className="w-full max-w-sm bg-white/5 border border-white/10 backdrop-blur-sm rounded-2xl p-8 shadow-card animate-fade-up">
 
         {/* Logo + Brand */}
         <div className="text-center mb-6">
-          <h1 className="text-xl font-display font-bold flex justify-center items-center gap-2 text-white">
-            <Sparkles className="h-5 w-5 text-brand-amber" />
-            Talentryx AI
-          </h1>
+          <div className="flex justify-center">
+            <BrandLogo href="/" className="text-white" />
+          </div>
           <p className="text-white/60 text-sm mt-1">Welcome back</p>
         </div>
 
@@ -94,14 +100,22 @@ export default function LoginPage() {
             className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
           />
 
-          <Input
-            type="password"
+          <PasswordInput
             placeholder="Password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
           />
+
+          <div className="flex justify-end -mt-1">
+            <Link
+              href="/forgot-password"
+              className="text-sm text-slate-400 hover:text-brand-amber transition-colors"
+            >
+              Forgot password?
+            </Link>
+          </div>
 
           <Button
             type="submit"
