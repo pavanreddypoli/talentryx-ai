@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import PersonaLink from "@/components/shared/PersonaLink";
 import { Fraunces } from "next/font/google";
 import {
   Menu,
@@ -157,8 +158,8 @@ export default function HomePage() {
               className="mt-6 text-lg text-white/70 max-w-xl mx-auto lg:mx-0 leading-relaxed animate-fade-up"
               style={{ animationDelay: "200ms" }}
             >
-              One platform, two AIs. <span className="text-white">Recruiters</span> rank candidates by true role
-              fit — semantic, not keyword bingo. <span className="text-white">Job seekers</span> see their match
+              One platform, two AIs. <PersonaLink type="recruiter" className="text-amber-300" /> rank candidates by true role
+              fit — semantic, not keyword bingo. <PersonaLink type="job-seeker" className="text-emerald-300" /> see their match
               score, get AI rewrites, and add the exact keywords that push them past the screen.
             </p>
 
@@ -469,7 +470,14 @@ export default function HomePage() {
                 icon: Trophy,
                 tone: "from-emerald-500 to-teal-600",
                 title: "Shortlist or improve",
-                body: "Recruiters export ATS-ready shortlists. Job seekers get concrete suggestions to push their score over 80%.",
+                body: (
+                  <>
+                    <PersonaLink type="recruiter" />{" "}
+                    export ATS-ready shortlists.{" "}
+                    <PersonaLink type="job-seeker" />{" "}
+                    get concrete suggestions to push their score over 80%.
+                  </>
+                ),
               },
             ].map((step, i) => (
               <div
@@ -673,8 +681,10 @@ export default function HomePage() {
                   See the difference yourself.
                 </h2>
                 <p className="mt-5 text-base text-white/70 max-w-xl leading-relaxed">
-                  Recruiters get their first ranked shortlist before their coffee gets cold.
-                  Job seekers see exactly how they stack up and what to fix — in seconds.
+                  <PersonaLink type="recruiter" className="text-amber-300" />{" "}
+                  get their first ranked shortlist before their coffee gets cold.{" "}
+                  <PersonaLink type="job-seeker" className="text-white/70" />{" "}
+                  see exactly how they stack up and what to fix — in seconds.
                 </p>
               </div>
 
