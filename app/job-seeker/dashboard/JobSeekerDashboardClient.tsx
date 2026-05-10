@@ -284,22 +284,22 @@ export default function JobSeekerDashboardClient() {
         </div>
       )}
 
-      <header className="flex items-center justify-between mb-2">
-        <h1 className="font-display font-bold flex items-center gap-2 text-brand-navy">
+      <header className="flex items-center justify-between mb-6">
+        <h1 className="font-display text-lg font-bold flex items-center gap-2 text-brand-navy">
           <Sparkles className="h-5 w-5 text-brand-amber" />
           Resume Match Analysis
         </h1>
         <span className="text-xs text-slate-400">Job Seeker Dashboard</span>
       </header>
 
-      <section className="px-4 py-8 space-y-6">
+      <section className="space-y-6">
 
         {/* HERO BANNER */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-brand-canvas via-amber-50 to-rose-50 px-8 py-10 rounded-2xl">
+        <div className="relative overflow-hidden bg-gradient-to-br from-brand-canvas via-amber-50 to-rose-50 px-5 py-7 sm:px-8 sm:py-10 rounded-2xl">
           <Sparkles className="absolute -right-4 -top-4 h-40 w-40 text-brand-amber/10 rotate-12 pointer-events-none" />
-          <div className="relative flex flex-col md:flex-row items-center justify-between gap-6">
-            <div>
-              <h2 className="font-display text-3xl font-bold text-brand-navy leading-tight">
+          <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="w-full md:w-auto">
+              <h2 className="font-display text-2xl sm:text-3xl font-bold text-brand-navy leading-tight">
                 Stand out. Get hired.
               </h2>
               <p className="mt-2 text-slate-600 max-w-md">
