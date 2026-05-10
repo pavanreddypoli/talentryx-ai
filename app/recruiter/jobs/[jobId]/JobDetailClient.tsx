@@ -4,8 +4,9 @@
 // for a low-value (single-job) shareability win.
 
 import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, X, SlidersHorizontal, Loader2 } from "lucide-react";
+import { ArrowLeft, X, SlidersHorizontal, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Job, Candidate, FilterState } from "@/lib/recruiter/types";
 import BulkUploadZone from "@/components/recruiter/BulkUploadZone";
@@ -13,6 +14,7 @@ import FiltersSidebar from "@/components/recruiter/FiltersSidebar";
 import CandidateTable from "@/components/recruiter/CandidateTable";
 import CandidateDrawer from "@/components/recruiter/CandidateDrawer";
 import EditableJobHeader from "@/components/recruiter/EditableJobHeader";
+import DeleteJobModal from "@/components/recruiter/DeleteJobModal";
 
 type Props = {
   initialJob: Job;
@@ -26,8 +28,10 @@ type Props = {
 const DEFAULT_FILTERS: FilterState = { score: "all", status: "all", search: "" };
 
 export default function JobDetailClient({ initialJob, initialCandidates, jobId, initialCandidateId, initialNeedsRerank, initialStaleCount }: Props) {
+  const router = useRouter();
   const [job, setJob] = useState<Job>(initialJob);
   const [candidates, setCandidates] = useState<Candidate[]>(initialCandidates);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [activeCandidate, setActiveCandidate] = useState<Candidate | null>(null);
   const [tableError, setTableError] = useState<string | null>(null);
@@ -100,6 +104,16 @@ export default function JobDetailClient({ initialJob, initialCandidates, jobId, 
     }
   }
 
+  // ── Hard delete job ───────────────────────────────────────────────────
+  async function handleDeleteJob() {
+    const res = await fetch(`/api/recruiter/jobs/${jobId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error ?? "Delete failed — please try again");
+    }
+    router.push("/recruiter/jobs?deleted=1");
+  }
+
   // ── Re-rank stale candidates ──────────────────────────────────────────
   async function handleRerank() {
     setIsReranking(true);
@@ -169,14 +183,25 @@ export default function JobDetailClient({ initialJob, initialCandidates, jobId, 
 
   return (
     <div className="space-y-6">
-      {/* Back link */}
-      <Link
-        href="/recruiter/jobs"
-        className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to jobs
-      </Link>
+      {/* Back link + delete */}
+      <div className="flex items-center justify-between">
+        <Link
+          href="/recruiter/jobs"
+          className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to jobs
+        </Link>
+        <button
+          type="button"
+          onClick={() => setDeleteModalOpen(true)}
+          className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-red-600 transition-colors"
+          aria-label="Delete job"
+        >
+          <Trash2 className="h-4 w-4" />
+          Delete job
+        </button>
+      </div>
 
       {/* Editable job header */}
       <EditableJobHeader job={job} stats={stats} onSaveField={onSaveField} />
@@ -332,6 +357,16 @@ export default function JobDetailClient({ initialJob, initialCandidates, jobId, 
             </div>
           </div>
         </>
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteModalOpen && (
+        <DeleteJobModal
+          jobTitle={job.title}
+          candidateCount={candidates.length}
+          onConfirm={handleDeleteJob}
+          onCancel={() => setDeleteModalOpen(false)}
+        />
       )}
     </div>
   );

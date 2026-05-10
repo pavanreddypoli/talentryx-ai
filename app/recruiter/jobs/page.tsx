@@ -4,7 +4,7 @@ import { getJobsWithStats } from "@/lib/recruiter/jobStats";
 import JobsListClient from "./JobsListClient";
 
 type Props = {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; deleted?: string }>;
 };
 
 export default async function RecruiterJobsPage({ searchParams }: Props) {
@@ -12,7 +12,7 @@ export default async function RecruiterJobsPage({ searchParams }: Props) {
   const { data: authData } = await supabase.auth.getUser();
   if (!authData.user) redirect("/login");
 
-  const { status } = await searchParams;
+  const { status, deleted } = await searchParams;
 
   const { jobs, perJobStats } = await getJobsWithStats(supabase);
 
@@ -37,6 +37,7 @@ export default async function RecruiterJobsPage({ searchParams }: Props) {
       statusCounts={statusCounts}
       hasAnyJobs={jobs.length > 0}
       currentStatus={status ?? null}
+      showDeletedBanner={deleted === "1"}
     />
   );
 }

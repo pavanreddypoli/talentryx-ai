@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 type Ctx = { params: Promise<{ jobId: string }> };
 
@@ -123,17 +124,43 @@ export async function DELETE(req: Request, { params }: Ctx) {
   if (!email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { jobId } = await params;
+
+  // Ownership check via RLS — returns null if unowned or not found
   const supabase = await createSupabaseServerClient();
+  const { data: job } = await supabase.from("jobs").select("id").eq("id", jobId).single();
+  if (!job) return NextResponse.json({ error: "Job not found" }, { status: 404 });
 
-  const { error } = await supabase.from("jobs").delete().eq("id", jobId);
+  // Step 1: collect session IDs (ranking_sessions.job_id FK is SET NULL, not CASCADE)
+  const { data: sessions } = await supabaseAdmin
+    .from("ranking_sessions")
+    .select("id")
+    .eq("job_id", jobId);
 
-  if (error) {
-    console.error("DELETE /api/recruiter/jobs/[jobId]:", error);
-    return NextResponse.json({ error: "Delete failed" }, { status: 500 });
+  const sessionIds = sessions?.map((s) => s.id) ?? [];
+
+  if (sessionIds.length > 0) {
+    // Step 2: collect storage paths before deleting rows
+    const { data: results } = await supabaseAdmin
+      .from("ranking_results")
+      .select("storage_path")
+      .in("session_id", sessionIds);
+
+    const paths = (results ?? [])
+      .map((r) => r.storage_path)
+      .filter((p): p is string => !!p);
+
+    // Step 3: delete storage files — non-fatal; log and continue on failure
+    if (paths.length > 0) {
+      const { error: storageErr } = await supabaseAdmin.storage.from("resumes").remove(paths);
+      if (storageErr) console.error("Storage cleanup error (non-fatal):", storageErr);
+    }
+
+    // Step 4: delete sessions — ON DELETE CASCADE removes ranking_results automatically
+    await supabaseAdmin.from("ranking_sessions").delete().in("id", sessionIds);
   }
 
-  // Intentionally idempotent: RLS silently no-ops when jobId doesn't exist or
-  // belongs to another recruiter, so this always returns { success: true }.
-  // Double-deletes are safe; callers should not expect 404 on a missing job.
-  return NextResponse.json({ success: true });
+  // Step 5: delete the job
+  await supabaseAdmin.from("jobs").delete().eq("id", jobId);
+
+  return new NextResponse(null, { status: 204 });
 }
