@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Pencil, ChevronDown } from "lucide-react";
+import { Pencil, ChevronDown, Sparkles, Loader2, X } from "lucide-react";
 import type { Job } from "@/lib/recruiter/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,14 @@ export default function EditableJobHeader({ job, stats, onSaveField }: Props) {
   const [editError, setEditError] = useState<string | null>(null);
   const [showFullJD, setShowFullJD] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+
+  // AI state for JD editing
+  const [isAiImproving, setIsAiImproving] = useState(false);
+  const [isAiGenerating, setIsAiGenerating] = useState(false);
+  const [genModalOpen, setGenModalOpen] = useState(false);
+  const [genContext, setGenContext] = useState("");
+  const [genRequirements, setGenRequirements] = useState("");
+  const [aiError, setAiError] = useState<string | null>(null);
 
   const statusRef = useRef<HTMLDivElement>(null);
 
@@ -87,6 +95,54 @@ export default function EditableJobHeader({ job, stats, onSaveField }: Props) {
       await onSaveField("status", status);
     } catch {
       // onSaveField already reverted job state and set tableError banner
+    }
+  }
+
+  async function handleAiImprove() {
+    if (!pendingValue.trim()) return;
+    setIsAiImproving(true);
+    setAiError(null);
+    try {
+      const res = await fetch("/api/recruiter/jd/improve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ existingJd: pendingValue.trim(), title: job.title }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Improvement failed");
+      setPendingValue(data.jdText);
+    } catch {
+      setAiError("AI improvement failed — please try again.");
+    } finally {
+      setIsAiImproving(false);
+    }
+  }
+
+  async function handleAiGenerate() {
+    setIsAiGenerating(true);
+    setAiError(null);
+    try {
+      const res = await fetch("/api/recruiter/jd/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: job.title,
+          context: genContext.trim() || undefined,
+          requirements: genRequirements.trim() || undefined,
+          location: job.location ?? undefined,
+          experienceLevel: job.experience_level ?? undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Generation failed");
+      setPendingValue(data.jdText);
+      setGenModalOpen(false);
+      setGenContext("");
+      setGenRequirements("");
+    } catch {
+      setAiError("AI generation failed — please try again.");
+    } finally {
+      setIsAiGenerating(false);
     }
   }
 
@@ -215,6 +271,33 @@ export default function EditableJobHeader({ job, stats, onSaveField }: Props) {
         {/* ── JD section ──────────────────────────────────────────── */}
         {editingField === "description" ? (
           <div className="space-y-2">
+            {/* AI buttons — only visible in edit mode */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => { setGenModalOpen(true); setAiError(null); }}
+                disabled={isAiGenerating || isAiImproving}
+                className="inline-flex items-center gap-1.5 rounded-md border border-brand-amber/40 bg-gradient-to-r from-brand-amber/5 to-orange-50 px-2.5 py-1 text-xs font-medium text-brand-amber hover:border-brand-amber/70 hover:from-brand-amber/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Generate JD
+              </button>
+              <button
+                type="button"
+                onClick={handleAiImprove}
+                disabled={isAiImproving || isAiGenerating || !pendingValue.trim()}
+                className="inline-flex items-center gap-1.5 rounded-md border border-brand-amber/40 bg-gradient-to-r from-brand-amber/5 to-orange-50 px-2.5 py-1 text-xs font-medium text-brand-amber hover:border-brand-amber/70 hover:from-brand-amber/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                {isAiImproving ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5" />
+                )}
+                {isAiImproving ? "Improving…" : "Improve with AI"}
+              </button>
+              {aiError && <p className="text-xs text-red-500">{aiError}</p>}
+            </div>
+
             <Textarea
               value={pendingValue}
               onChange={(e) => setPendingValue(e.target.value)}
@@ -245,6 +328,91 @@ export default function EditableJobHeader({ job, stats, onSaveField }: Props) {
         )}
 
       </CardContent>
+
+      {/* Generate JD modal */}
+      {genModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+          <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-brand-amber" />
+                <h2 className="text-sm font-semibold text-slate-900">Generate Job Description</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setGenModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4 px-5 py-4">
+              <p className="text-xs text-slate-500">
+                AI will use the job title ({job.title})
+                {job.location ? `, location (${job.location})` : ""}
+                {job.experience_level ? `, experience level (${job.experience_level})` : ""}
+                {" "}automatically. Add anything extra below.
+              </p>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-700">
+                  About the company / role (optional)
+                </label>
+                <Textarea
+                  value={genContext}
+                  onChange={(e) => setGenContext(e.target.value)}
+                  placeholder="e.g. Fast-growing fintech startup, remote-first culture…"
+                  className="min-h-20 resize-y text-sm border-slate-200 focus-visible:ring-brand-amber/50 focus-visible:border-brand-amber"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-700">
+                  Key requirements (optional)
+                </label>
+                <Textarea
+                  value={genRequirements}
+                  onChange={(e) => setGenRequirements(e.target.value)}
+                  placeholder="e.g. 5+ years React, TypeScript required…"
+                  className="min-h-20 resize-y text-sm border-slate-200 focus-visible:ring-brand-amber/50 focus-visible:border-brand-amber"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-5 py-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setGenModalOpen(false)}
+                disabled={isAiGenerating}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="brand-primary"
+                size="sm"
+                onClick={handleAiGenerate}
+                disabled={isAiGenerating}
+              >
+                {isAiGenerating ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Generating…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Generate
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }
