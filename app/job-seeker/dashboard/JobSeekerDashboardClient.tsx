@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { diffSentences } from "diff";
+import { parseRewrittenResume, sanitizeFilename } from "@/lib/resumeParser";
 import confetti from "canvas-confetti";
 import SparkleSuccess from "@/components/SparkleSuccess";
 import DownloadResumeButton from "@/components/DownloadResumeButton";
@@ -103,6 +104,7 @@ export default function JobSeekerDashboardClient() {
   const [aiWorking, setAiWorking] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [downloading, setDownloading] = useState<"docx" | "pdf" | null>(null);
 
   const onDrop = (accepted: File[]) => setFiles(accepted);
 
@@ -242,6 +244,44 @@ export default function JobSeekerDashboardClient() {
     }
   }
 
+  async function handleDownloadDocx() {
+    setDownloading("docx");
+    try {
+      const parsed = parseRewrittenResume(aiContent);
+      const { generateDocx } = await import("@/lib/generateDocx");
+      const blob = await generateDocx(parsed);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = sanitizeFilename(parsed.name, "docx");
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("DOCX generation failed:", err);
+    } finally {
+      setDownloading(null);
+    }
+  }
+
+  async function handleDownloadPdf() {
+    setDownloading("pdf");
+    try {
+      const parsed = parseRewrittenResume(aiContent);
+      const { generatePdf } = await import("@/lib/generatePdf");
+      const blob = await generatePdf(parsed);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = sanitizeFilename(parsed.name, "pdf");
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+    } finally {
+      setDownloading(null);
+    }
+  }
+
   function handleCopy() {
     navigator.clipboard.writeText(aiContent).then(() => {
       setCopied(true);
@@ -339,14 +379,44 @@ export default function JobSeekerDashboardClient() {
             </div>
 
             {/* Footer — sticky */}
-            <div className="flex-shrink-0 px-5 py-4 border-t border-slate-200 flex items-center justify-end gap-2">
+            <div className="flex-shrink-0 px-5 py-4 border-t border-slate-200 flex items-center justify-end gap-2 flex-wrap">
               <Button variant="outline" onClick={() => setAiOpen(false)}>
                 Close
               </Button>
               {aiContent && (
-                <Button variant="brand-primary" onClick={handleCopy}>
-                  {copied ? "Copied!" : "Copy rewritten"}
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={handleDownloadDocx}
+                    disabled={downloading !== null}
+                  >
+                    {downloading === "docx" ? (
+                      <span className="flex items-center gap-1.5">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Generating…
+                      </span>
+                    ) : (
+                      "↓ Download .docx"
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleDownloadPdf}
+                    disabled={downloading !== null}
+                  >
+                    {downloading === "pdf" ? (
+                      <span className="flex items-center gap-1.5">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Generating…
+                      </span>
+                    ) : (
+                      "↓ Download .pdf"
+                    )}
+                  </Button>
+                  <Button variant="brand-primary" onClick={handleCopy}>
+                    {copied ? "Copied!" : "Copy rewritten"}
+                  </Button>
+                </>
               )}
             </div>
           </div>
