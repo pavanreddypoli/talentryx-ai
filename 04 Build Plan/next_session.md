@@ -1,4 +1,5 @@
 # Next session — pick up here
+<!-- stripe test deploy -->
 
 ## E1b — Billing page (next after E1a ships)
 
