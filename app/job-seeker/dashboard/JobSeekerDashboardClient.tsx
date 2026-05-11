@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useDropzone } from "react-dropzone";
+import { diffSentences } from "diff";
 import confetti from "canvas-confetti";
 import SparkleSuccess from "@/components/SparkleSuccess";
 import DownloadResumeButton from "@/components/DownloadResumeButton";
@@ -35,23 +36,53 @@ import {
 } from "lucide-react";
 
 /* -----------------------------
+   Markdown cleanup
+------------------------------ */
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/^#{1,6}\s+/gm, "")        // ## Heading → Heading
+    .replace(/\*\*(.*?)\*\*/g, "$1")     // **bold** → bold
+    .replace(/\*(.*?)\*/g, "$1")         // *italic* → italic
+    .replace(/^[-*]\s+/gm, "• ")         // - item → • item
+    .trim();
+}
+
+/* -----------------------------
+   Diff view (right column)
+   Only shows unchanged + added text — removed words omitted so
+   the right side reads as a clean, polished resume.
+------------------------------ */
+function DiffView({ original, rewritten }: { original: string; rewritten: string }) {
+  const parts = diffSentences(stripMarkdown(original), stripMarkdown(rewritten));
+  return (
+    <div className="whitespace-pre-wrap text-sm text-slate-800 leading-relaxed">
+      {parts.map((part, i) => {
+        if (part.removed) return null;
+        if (part.added) {
+          return (
+            <mark
+              key={i}
+              className="bg-yellow-200 dark:bg-yellow-900/30 px-0.5 rounded-sm"
+            >
+              {part.value}
+            </mark>
+          );
+        }
+        return <span key={i}>{part.value}</span>;
+      })}
+    </div>
+  );
+}
+
+/* -----------------------------
    Score badge logic
 ------------------------------ */
 function getScoreInfo(score: number) {
   if (score >= 85)
-    return {
-      label: "Strong match",
-      className: "bg-emerald-100 text-emerald-700",
-    };
+    return { label: "Strong match", className: "bg-emerald-100 text-emerald-700" };
   if (score >= 60)
-    return {
-      label: "Potential fit",
-      className: "bg-amber-100 text-amber-700",
-    };
-  return {
-    label: "Low match",
-    className: "bg-rose-100 text-rose-700",
-  };
+    return { label: "Potential fit", className: "bg-amber-100 text-amber-700" };
+  return { label: "Low match", className: "bg-rose-100 text-rose-700" };
 }
 
 /* -----------------------------
@@ -68,8 +99,10 @@ export default function JobSeekerDashboardClient() {
   const [aiOpen, setAiOpen] = useState(false);
   const [aiTitle, setAiTitle] = useState("");
   const [aiContent, setAiContent] = useState("");
+  const [aiOriginalText, setAiOriginalText] = useState("");
   const [aiWorking, setAiWorking] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const onDrop = (accepted: File[]) => setFiles(accepted);
 
@@ -78,8 +111,7 @@ export default function JobSeekerDashboardClient() {
     accept: {
       "application/pdf": [],
       "application/msword": [],
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-        [],
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [],
     },
   });
 
@@ -126,6 +158,7 @@ export default function JobSeekerDashboardClient() {
   function openAiModal(title: string) {
     setAiTitle(title);
     setAiContent("");
+    setAiOriginalText("");
     setAiError(null);
     setAiOpen(true);
   }
@@ -143,16 +176,14 @@ export default function JobSeekerDashboardClient() {
     }
 
     openAiModal("Rewrite with AI");
+    setAiOriginalText(resumeText);
     setAiWorking(true);
 
     try {
       const res = await fetch("/api/ai/rewrite-resume", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          resumeText,
-          jd: jobDescription,
-        }),
+        body: JSON.stringify({ resumeText, jd: jobDescription }),
       });
 
       let data: any;
@@ -191,10 +222,7 @@ export default function JobSeekerDashboardClient() {
       const res = await fetch("/api/ai/boost-to-80", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          resumeText,
-          jd: jobDescription,
-        }),
+        body: JSON.stringify({ resumeText, jd: jobDescription }),
       });
 
       let data: any;
@@ -214,18 +242,36 @@ export default function JobSeekerDashboardClient() {
     }
   }
 
+  function handleCopy() {
+    navigator.clipboard.writeText(aiContent).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {});
+  }
+
+  const isRewrite = aiTitle === "Rewrite with AI";
+
   return (
     <>
       <SparkleSuccess trigger={success} />
 
-      {/* AI RESULT MODAL */}
+      {/* ── AI MODAL ──────────────────────────────────────────── */}
       {aiOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-3xl rounded-2xl bg-white shadow-card border border-slate-200">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
+          <div
+            className={`w-full flex flex-col rounded-2xl bg-white shadow-card border border-slate-200 max-h-[90vh] ${
+              isRewrite ? "max-w-5xl" : "max-w-3xl"
+            }`}
+          >
+            {/* Header — sticky */}
+            <div className="flex-shrink-0 flex items-center justify-between px-5 py-4 border-b border-slate-200">
               <div>
-                <div className="text-xs font-semibold text-brand-amber uppercase tracking-wide">Talentryx AI</div>
-                <div className="text-lg font-display font-semibold text-slate-800">{aiTitle}</div>
+                <div className="text-xs font-semibold text-brand-amber uppercase tracking-wide">
+                  Talentryx AI
+                </div>
+                <div className="text-lg font-display font-semibold text-slate-800">
+                  {aiTitle}
+                </div>
               </div>
               <button
                 onClick={() => setAiOpen(false)}
@@ -236,7 +282,9 @@ export default function JobSeekerDashboardClient() {
               </button>
             </div>
 
-            <div className="px-5 py-4">
+            {/* Body — scrollable */}
+            <div className="flex-1 overflow-y-auto px-5 py-4 min-h-0">
+              {/* Loading */}
               {aiWorking && (
                 <div className="flex items-center gap-2 text-sm text-slate-600">
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -244,41 +292,62 @@ export default function JobSeekerDashboardClient() {
                 </div>
               )}
 
+              {/* Error */}
               {aiError && (
-                <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                   {aiError}
                 </div>
               )}
 
-              {!aiWorking && !aiError && aiContent && (
-                <pre className="mt-3 whitespace-pre-wrap break-words text-sm text-slate-800">
-                  {aiContent}
-                </pre>
+              {/* Rewrite — two-column comparison */}
+              {!aiWorking && !aiError && aiContent && isRewrite && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Left — Original */}
+                  <div>
+                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3 pb-2 border-b border-slate-100">
+                      Original Resume
+                    </h3>
+                    <div className="whitespace-pre-wrap text-sm text-slate-600 leading-relaxed">
+                      {stripMarkdown(aiOriginalText)}
+                    </div>
+                  </div>
+
+                  {/* Right — Rewritten with diff highlights */}
+                  <div>
+                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3 pb-2 border-b border-slate-100 flex items-center gap-2">
+                      Rewritten Resume
+                      <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-medium text-yellow-700 normal-case tracking-normal">
+                        highlighted = changed
+                      </span>
+                    </h3>
+                    <DiffView original={aiOriginalText} rewritten={aiContent} />
+                  </div>
+                </div>
               )}
 
-              {!aiWorking && !aiError && !aiContent && (
-                <div className="mt-3 text-sm text-slate-500">
-                  Output will appear here.
+              {/* Boost — single column */}
+              {!aiWorking && !aiError && aiContent && !isRewrite && (
+                <div className="whitespace-pre-wrap text-sm text-slate-800 leading-relaxed">
+                  {stripMarkdown(aiContent)}
                 </div>
+              )}
+
+              {/* Empty state */}
+              {!aiWorking && !aiError && !aiContent && (
+                <div className="text-sm text-slate-500">Output will appear here.</div>
               )}
             </div>
 
-            <div className="px-5 py-4 border-t border-slate-200 flex items-center justify-end gap-2">
+            {/* Footer — sticky */}
+            <div className="flex-shrink-0 px-5 py-4 border-t border-slate-200 flex items-center justify-end gap-2">
               <Button variant="outline" onClick={() => setAiOpen(false)}>
                 Close
               </Button>
-              <Button
-                variant="brand-primary"
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(aiContent || "");
-                  } catch {
-                    // ignore
-                  }
-                }}
-              >
-                Copy
-              </Button>
+              {aiContent && (
+                <Button variant="brand-primary" onClick={handleCopy}>
+                  {copied ? "Copied!" : "Copy rewritten"}
+                </Button>
+              )}
             </div>
           </div>
         </div>
