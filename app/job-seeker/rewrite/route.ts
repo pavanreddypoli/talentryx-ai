@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { anthropic, CLAUDE_MODEL } from "@/lib/anthropic";
 
 export async function POST(req: Request) {
   try {
@@ -24,63 +25,20 @@ export async function POST(req: Request) {
       );
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "OPENAI_API_KEY not configured" },
-        { status: 500 }
-      );
-    }
-
-    const openAiResponse = await fetch(
-      "https://api.openai.com/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
+    const response = await anthropic.messages.create({
+      model: CLAUDE_MODEL,
+      max_tokens: 4000,
+      system: "You are an expert resume writer. Improve clarity, impact, and ATS alignment. Do not invent facts.",
+      messages: [
+        {
+          role: "user",
+          content: `JOB DESCRIPTION:\n${jobDescription}\n\nRESUME (${candidateName || "Candidate"}):\n${resumeText}`,
         },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          temperature: 0.4,
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are an expert resume writer. Improve clarity, impact, and ATS alignment. Do not invent facts.",
-            },
-            {
-              role: "user",
-              content: `JOB DESCRIPTION:\n${jobDescription}\n\nRESUME (${candidateName || "Candidate"}):\n${resumeText}`,
-            },
-          ],
-        }),
-      }
-    );
-
-    const rawText = await openAiResponse.text();
-
-    if (!openAiResponse.ok) {
-      console.error("OpenAI rewrite error:", rawText);
-      return NextResponse.json(
-        { error: "AI rewrite failed", details: rawText },
-        { status: 500 }
-      );
-    }
-
-    let parsed;
-    try {
-      parsed = JSON.parse(rawText);
-    } catch (err) {
-      console.error("Rewrite JSON parse failed:", rawText);
-      return NextResponse.json(
-        { error: "Invalid AI response format" },
-        { status: 500 }
-      );
-    }
+      ],
+    });
 
     const content =
-      parsed?.choices?.[0]?.message?.content || "";
+      response.content[0].type === "text" ? response.content[0].text : "";
 
     return NextResponse.json({ content });
   } catch (err) {

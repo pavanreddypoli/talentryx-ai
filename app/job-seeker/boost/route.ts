@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { anthropic, CLAUDE_MODEL } from "@/lib/anthropic";
 
 export async function POST(req: Request) {
   try {
@@ -26,34 +27,14 @@ export async function POST(req: Request) {
       );
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "OPENAI_API_KEY not configured" },
-        { status: 500 }
-      );
-    }
-
-    const openAiResponse = await fetch(
-      "https://api.openai.com/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          temperature: 0.3,
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are an ATS optimization expert. Suggest realistic, keyword-focused changes to reach 80%+ match. Do not invent facts.",
-            },
-            {
-              role: "user",
-              content: `JOB DESCRIPTION:\n${jobDescription}
+    const response = await anthropic.messages.create({
+      model: CLAUDE_MODEL,
+      max_tokens: 4000,
+      system: "You are an ATS optimization expert. Suggest realistic, keyword-focused changes to reach 80%+ match. Do not invent facts.",
+      messages: [
+        {
+          role: "user",
+          content: `JOB DESCRIPTION:\n${jobDescription}
 
 CURRENT SCORE: ${currentScore}
 
@@ -62,35 +43,12 @@ ${missingKeywords.join(", ")}
 
 RESUME (${candidateName || "Candidate"}):
 ${resumeText}`,
-            },
-          ],
-        }),
-      }
-    );
-
-    const rawText = await openAiResponse.text();
-
-    if (!openAiResponse.ok) {
-      console.error("OpenAI boost error:", rawText);
-      return NextResponse.json(
-        { error: "AI boost failed", details: rawText },
-        { status: 500 }
-      );
-    }
-
-    let parsed;
-    try {
-      parsed = JSON.parse(rawText);
-    } catch (err) {
-      console.error("Boost JSON parse failed:", rawText);
-      return NextResponse.json(
-        { error: "Invalid AI response format" },
-        { status: 500 }
-      );
-    }
+        },
+      ],
+    });
 
     const content =
-      parsed?.choices?.[0]?.message?.content || "";
+      response.content[0].type === "text" ? response.content[0].text : "";
 
     return NextResponse.json({ content });
   } catch (err) {

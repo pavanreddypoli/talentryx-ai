@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
-
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+import { anthropic, CLAUDE_MODEL } from "@/lib/anthropic";
 
 export async function POST(req: Request) {
   try {
@@ -13,27 +11,27 @@ export async function POST(req: Request) {
       );
     }
 
-    const prompt = `
-Summarize the candidate's resume for a recruiter screening.
+    const prompt = `Summarize the candidate's resume for a recruiter screening.
 Keep it concise, factual, and in bullet points.
 
 Include:
-• Key strengths  
-• Technical skills  
-• Experience level  
-• Industries worked in  
+• Key strengths
+• Technical skills
+• Experience level
+• Industries worked in
 • Red flags (if any)
 
 Resume:
-${resume}
-`;
+${resume}`;
 
-    const completion = await client.chat.completions.create({
-      model: "gpt-4.1-mini",
+    const response = await anthropic.messages.create({
+      model: CLAUDE_MODEL,
+      max_tokens: 2000,
       messages: [{ role: "user", content: prompt }],
     });
 
-    const text = completion.choices[0].message?.content || "";
+    const text =
+      response.content[0].type === "text" ? response.content[0].text : "";
 
     return NextResponse.json({ text });
   } catch (err) {

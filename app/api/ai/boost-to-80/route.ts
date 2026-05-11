@@ -1,43 +1,34 @@
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
+import { anthropic, CLAUDE_MODEL } from "@/lib/anthropic";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
-
-// === SCORE PROMPT ===
 async function getScore(resume: string, jd: string): Promise<number> {
-  const scorePrompt = `
-You are an ATS scoring engine used by recruiters.
-
-Score the candidate resume against the job description.
-
-Return ONLY a number between 0 and 100.
+  const response = await anthropic.messages.create({
+    model: CLAUDE_MODEL,
+    max_tokens: 10,
+    system: "You are an ATS scoring engine. Respond with ONLY a single integer between 0 and 100. No other text.",
+    messages: [
+      {
+        role: "user",
+        content: `Score the candidate resume against the job description. Return ONLY a number 0-100.
 
 Resume:
 ${resume}
 
 Job Description:
-${jd}
-`;
-
-  const result = await openai.chat.completions.create({
-    model: "gpt-4.1-mini",
-    messages: [{ role: "user", content: scorePrompt }],
-    max_tokens: 5,
+${jd}`,
+      },
+    ],
   });
 
-  const raw = result?.choices?.[0]?.message?.content || "0";
-  const score = parseFloat(raw);
-
+  const raw =
+    response.content[0].type === "text" ? response.content[0].text : "0";
+  const score = parseFloat(raw.trim());
   return isNaN(score) ? 0 : score;
 }
 
-// === REWRITE ===
 async function rewriteResume(resume: string, jd?: string): Promise<string> {
   const prompt = jd
-    ? `
-Rewrite this resume so it matches the job description.
+    ? `Rewrite this resume so it matches the job description.
 Keep it truthful, concise, ATS friendly, and achievement-driven.
 
 Resume:
@@ -46,34 +37,31 @@ ${resume}
 Job Description:
 ${jd}
 
-Return only the rewritten resume text.
-`
-    : `
-Rewrite this resume to improve clarity, ATS alignment, and impact.
+Return only the rewritten resume text.`
+    : `Rewrite this resume to improve clarity, ATS alignment, and impact.
 Keep it truthful.
 
 Resume:
 ${resume}
 
-Return only the rewritten resume text.
-`;
+Return only the rewritten resume text.`;
 
-  const result = await openai.chat.completions.create({
-    model: "gpt-4.1-mini",
+  const response = await anthropic.messages.create({
+    model: CLAUDE_MODEL,
+    max_tokens: 4000,
     messages: [{ role: "user", content: prompt }],
-    max_tokens: 1500,
   });
 
-  return result?.choices?.[0]?.message?.content || resume;
+  return response.content[0].type === "text"
+    ? response.content[0].text
+    : resume;
 }
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    const resume: string =
-      body.resume || body.resumeText || "";
-
+    const resume: string = body.resume || body.resumeText || "";
     const jd: string | undefined = body.jd;
 
     if (!resume) {
@@ -83,12 +71,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // ======================
-    // JOB SEEKER MODE
-    // ======================
+    // Job seeker mode — no JD, just improve
     if (!jd) {
       const improved = await rewriteResume(resume);
-
       return NextResponse.json({
         beforeScore: null,
         afterScore: null,
@@ -97,9 +82,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // ======================
-    // RECRUITER MODE
-    // ======================
+    // Recruiter mode — iterate until score >= 80 or 5 attempts
     const originalScore = await getScore(resume, jd);
 
     let currentResume = resume;
@@ -120,8 +103,6 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     console.error("boost-to-80 error:", err);
-
-    // ✅ GUARANTEED JSON
     return NextResponse.json(
       {
         error: "Boost failed",

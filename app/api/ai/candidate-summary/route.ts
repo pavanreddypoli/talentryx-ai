@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { anthropic, CLAUDE_MODEL } from "@/lib/anthropic";
 
 export async function POST(req: Request) {
   try {
@@ -10,10 +10,7 @@ export async function POST(req: Request) {
 
     const { text, score } = await req.json();
 
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-    const prompt = `
-You are an expert technical recruiter.
+    const prompt = `You are an expert technical recruiter.
 
 Summarize this candidate into:
 - Executive summary (2–3 sentences)
@@ -23,18 +20,18 @@ Summarize this candidate into:
 - 1 Sentence role-fit summary
 
 Resume text:
-${text}
-    `;
+${text}`;
 
-    const completion = await client.chat.completions.create({
-      model: "gpt-4.1",
-      messages: [{ role: "user", content: prompt }]
+    const response = await anthropic.messages.create({
+      model: CLAUDE_MODEL,
+      max_tokens: 2000,
+      messages: [{ role: "user", content: prompt }],
     });
 
-    return NextResponse.json({
-      summary: completion.choices[0].message.content
-    });
+    const summary =
+      response.content[0].type === "text" ? response.content[0].text : "";
 
+    return NextResponse.json({ summary });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: "Summary failed" }, { status: 500 });
