@@ -25,7 +25,7 @@ export async function POST() {
   try {
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: profile.stripe_customer_id,
-      return_url: "https://talentryxai.com/job-seeker/billing",
+      return_url: `${process.env.NEXT_PUBLIC_APP_URL}/job-seeker/billing`,
     });
     return NextResponse.json({ url: portalSession.url });
   } catch (err) {

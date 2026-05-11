@@ -39,8 +39,8 @@ export async function POST() {
       customer: customerId,
       payment_method_types: ["card"],
       line_items: [{ price: process.env.STRIPE_PRICE_PRO!, quantity: 1 }],
-      success_url: "https://talentryxai.com/recruiter/billing?success=true",
-      cancel_url: "https://talentryxai.com/recruiter/billing",
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/recruiter/billing?success=true`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/recruiter/billing`,
       metadata: { product: "talentryx", subproduct: "pro", user_id: user.id },
       subscription_data: {
         metadata: { product: "talentryx", subproduct: "pro", user_id: user.id },
