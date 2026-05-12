@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import { ALL_STATUSES, STATUS_CONFIG, resolveStatus } from "@/lib/candidateStatuses";
 import type { CandidateStatus } from "@/lib/candidateStatuses";
@@ -13,9 +13,18 @@ type Props = {
 
 export default function StatusPill({ status, onChange, size = "sm" }: Props) {
   const [open, setOpen] = useState(false);
+  const [openUpward, setOpenUpward] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const resolved = resolveStatus(status);
   const cfg = STATUS_CONFIG[resolved];
+
+  // Measure available space below trigger; flip upward if < 340px (320 max-height + 20 buffer)
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    setOpenUpward(window.innerHeight - rect.bottom < 340);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -33,6 +42,7 @@ export default function StatusPill({ status, onChange, size = "sm" }: Props) {
   return (
     <div ref={ref} className="relative inline-flex">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={`inline-flex items-center gap-1 rounded-full border font-medium transition-opacity hover:opacity-80 ${pillPadding} ${cfg.bgClass} ${cfg.textClass} ${cfg.borderClass}`}
@@ -42,7 +52,7 @@ export default function StatusPill({ status, onChange, size = "sm" }: Props) {
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-50 min-w-[160px] rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+        <div className={`absolute left-0 z-50 min-w-[160px] max-h-[320px] overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg ${openUpward ? "bottom-full mb-1" : "top-full mt-1"}`}>
           {ALL_STATUSES.map((s) => {
             const c = STATUS_CONFIG[s];
             return (
