@@ -7,13 +7,13 @@ import CandidateRow from "@/components/recruiter/CandidateRow";
 type Props = {
   candidates: Candidate[];
   onView: (c: Candidate) => void;
+  onStatusChange: (id: string, status: string) => void;
   tableError: string | null;
 };
 
-export default function CandidateTable({ candidates, onView, tableError }: Props) {
+export default function CandidateTable({ candidates, onView, onStatusChange, tableError }: Props) {
   return (
     <div className="space-y-3">
-      {/* Status change error banner — auto-dismissed by JobDetailClient after 4 s */}
       {tableError && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
           {tableError}
@@ -30,17 +30,24 @@ export default function CandidateTable({ candidates, onView, tableError }: Props
         </div>
       ) : (
         <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
-          {/* Header */}
-          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-3 px-4 py-2.5 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+          {/* Header — same grid as CandidateRow */}
+          <div className="grid grid-cols-[28px_1fr_80px_148px_68px] gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+            <span />
             <span>Candidate</span>
             <span>Score</span>
             <span>Status</span>
             <span />
           </div>
-          {/* Rows */}
+          {/* Rows — passed in pre-sorted by score desc; rank = position in list */}
           <div className="divide-y divide-slate-100">
-            {candidates.map((c) => (
-              <CandidateRow key={c.id} candidate={c} onView={onView} />
+            {candidates.map((c, i) => (
+              <CandidateRow
+                key={c.id}
+                candidate={c}
+                rank={i + 1}
+                onView={onView}
+                onStatusChange={onStatusChange}
+              />
             ))}
           </div>
         </div>

@@ -8,7 +8,7 @@ export type Candidate = {
   matched_keywords: string[] | null;
   missing_keywords: string[] | null;
   summary: string[] | null; // stored strengths array
-  status: string; // "pending" | "shortlisted" | "rejected"
+  status: string; // one of CandidateStatus values from lib/candidateStatuses.ts
   recruiter_notes: string | null;
   storage_path: string | null;
   created_at: string;
@@ -27,8 +27,10 @@ export type Job = {
   recruiter_id: string;
 };
 
+import type { CandidateStatus } from "@/lib/candidateStatuses";
+
 export type FilterState = {
   score: "all" | "80plus" | "60to79" | "below60";
-  status: "all" | "pending" | "shortlisted" | "rejected";
+  status: "all" | CandidateStatus;
   search: string;
 };

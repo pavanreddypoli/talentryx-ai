@@ -21,9 +21,13 @@ export async function PATCH(req: Request, { params }: Ctx) {
     recruiter_notes?: string;
   };
 
-  if (status !== undefined && !["pending", "shortlisted", "rejected"].includes(status)) {
+  const VALID_STATUSES = [
+    "pending", "shortlisted", "phone_screen", "interviewing",
+    "offer_extended", "hired", "rejected", "withdrew",
+  ];
+  if (status !== undefined && !VALID_STATUSES.includes(status)) {
     return NextResponse.json(
-      { error: "status must be one of: pending, shortlisted, rejected" },
+      { error: `status must be one of: ${VALID_STATUSES.join(", ")}` },
       { status: 400 }
     );
   }

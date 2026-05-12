@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { X, Star, XCircle, Share2, Check, FileText } from "lucide-react";
+import { X, Share2, Check, FileText } from "lucide-react";
 import type { Candidate } from "@/lib/recruiter/types";
+import type { CandidateStatus } from "@/lib/candidateStatuses";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import StatusPill from "@/components/recruiter/StatusPill";
 
 type Props = {
   candidate: Candidate | null;
@@ -256,26 +258,15 @@ export default function CandidateDrawer({
         </div>
 
         {/* Footer actions */}
-        <div className="shrink-0 px-6 py-4 border-t border-slate-200 flex items-center gap-2 flex-wrap">
-          <Button
-            variant="brand-primary"
-            size="sm"
-            disabled={candidate.status === "shortlisted"}
-            onClick={() => onStatusChange(candidate.id, "shortlisted")}
-          >
-            <Star className="h-4 w-4" />
-            Shortlist
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={candidate.status === "rejected"}
-            onClick={() => onStatusChange(candidate.id, "rejected")}
-            className="border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40"
-          >
-            <XCircle className="h-4 w-4" />
-            Reject
-          </Button>
+        <div className="shrink-0 px-6 py-4 border-t border-slate-200 flex items-center gap-3 flex-wrap">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-slate-500 font-medium">Pipeline stage</span>
+            <StatusPill
+              status={candidate.status ?? "pending"}
+              onChange={(newStatus: CandidateStatus) => onStatusChange(candidate.id, newStatus)}
+              size="md"
+            />
+          </div>
           <Button
             variant="outline"
             size="sm"

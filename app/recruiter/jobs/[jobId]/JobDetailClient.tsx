@@ -317,6 +317,7 @@ export default function JobDetailClient({ initialJob, initialCandidates, jobId, 
               <CandidateTable
                 candidates={filteredCandidates}
                 onView={setActiveCandidate}
+                onStatusChange={handleStatusChange}
                 tableError={tableError}
               />
             </div>

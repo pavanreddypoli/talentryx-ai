@@ -1,6 +1,8 @@
 "use client";
 
 import type { FilterState } from "@/lib/recruiter/types";
+import { ALL_STATUSES, STATUS_CONFIG } from "@/lib/candidateStatuses";
+import type { CandidateStatus } from "@/lib/candidateStatuses";
 
 type Props = {
   filters: FilterState;
@@ -12,13 +14,6 @@ const SCORE_OPTIONS: { value: FilterState["score"]; label: string }[] = [
   { value: "80plus", label: "80%+" },
   { value: "60to79", label: "60–79%" },
   { value: "below60", label: "Below 60%" },
-];
-
-const STATUS_OPTIONS: { value: FilterState["status"]; label: string }[] = [
-  { value: "all", label: "All statuses" },
-  { value: "pending", label: "Pending" },
-  { value: "shortlisted", label: "Shortlisted" },
-  { value: "rejected", label: "Rejected" },
 ];
 
 export default function FiltersSidebar({ filters, onChange }: Props) {
@@ -48,21 +43,37 @@ export default function FiltersSidebar({ filters, onChange }: Props) {
       </div>
 
       {/* Status */}
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</p>
-        {STATUS_OPTIONS.map((o) => (
-          <label key={o.value} className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="filter-status"
-              value={o.value}
-              checked={filters.status === o.value}
-              onChange={() => onChange({ ...filters, status: o.value })}
-              className="accent-brand-amber"
-            />
-            <span className="text-slate-700 text-sm">{o.label}</span>
-          </label>
-        ))}
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="radio"
+            name="filter-status"
+            value="all"
+            checked={filters.status === "all"}
+            onChange={() => onChange({ ...filters, status: "all" })}
+            className="accent-brand-amber"
+          />
+          <span className="text-slate-700 text-sm">All statuses</span>
+        </label>
+        {ALL_STATUSES.map((s: CandidateStatus) => {
+          const cfg = STATUS_CONFIG[s];
+          return (
+            <label key={s} className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="filter-status"
+                value={s}
+                checked={filters.status === s}
+                onChange={() => onChange({ ...filters, status: s })}
+                className="accent-brand-amber"
+              />
+              <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${cfg.bgClass} ${cfg.textClass} ${cfg.borderClass}`}>
+                {cfg.label}
+              </span>
+            </label>
+          );
+        })}
       </div>
 
       {/* Search */}
@@ -77,7 +88,7 @@ export default function FiltersSidebar({ filters, onChange }: Props) {
         />
       </div>
 
-      {/* Clear all — only shown when a filter is active */}
+      {/* Clear all */}
       {hasActiveFilters && (
         <button
           type="button"
