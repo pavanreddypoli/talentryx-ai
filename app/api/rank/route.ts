@@ -211,6 +211,7 @@ export async function POST(req: Request) {
     const keywords = buildKeywords(jdText);
 
     const results: any[] = [];
+    const extractionErrors: string[] = [];
 
     for (const file of files) {
       const buffer = Buffer.from(await file.arrayBuffer());
@@ -232,7 +233,8 @@ export async function POST(req: Request) {
         }
       } catch (err) {
         console.error("Extraction failed for:", file.name, err);
-        text = "";
+        extractionErrors.push(`Could not extract text from "${file.name}" — ${err instanceof Error ? err.message : "unsupported format or corrupted file"}`);
+        continue; // skip this file entirely; don't write a 0% record
       }
 
       text = normalizeText(text);
@@ -321,7 +323,10 @@ export async function POST(req: Request) {
       console.error("Persistence error in /api/rank:", persistErr);
     }
 
-    return NextResponse.json({ results });
+    return NextResponse.json({
+      results,
+      ...(extractionErrors.length > 0 ? { extractionErrors } : {}),
+    });
   } catch (err) {
     console.error("ERROR /api/rank:", err);
     return NextResponse.json({ error: "Ranking failed" }, { status: 500 });

@@ -39,22 +39,13 @@ export async function extractDocText(buffer: Buffer): Promise<string> {
    PDF extraction (Vercel + Next 16 safe)
 ------------------------- */
 export async function extractPdfText(buffer: Buffer): Promise<string> {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const pdfParse = require("pdf-parse");
-
-    const parsed = await pdfParse(buffer);
-
-    if (!parsed || !parsed.text || parsed.text.trim().length === 0) {
-      console.warn("PDF parsed but no text extracted");
-      return "";
-    }
-
-    return parsed.text;
-  } catch (err) {
-    console.error("PDF parse failed, continuing without text:", err);
-    return ""; // IMPORTANT: never throw
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const pdfParse = require("pdf-parse");
+  const parsed = await pdfParse(buffer);
+  if (!parsed?.text?.trim()) {
+    throw new Error("PDF parsed but no text could be extracted (possibly a scanned/image-only PDF)");
   }
+  return parsed.text;
 }
 
 

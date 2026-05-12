@@ -53,17 +53,29 @@ export default function BulkUploadZone({ jobDescription, jobId, onRankingComplet
 
     // TODO: Persist upload state across page closes (Issue: ranked candidates
     // persist in DB but UI loses track if tab closed mid-loop)
+    const rankErrors: string[] = [];
+
     for (let i = 0; i < files.length; i++) {
       const fd = new FormData();
       fd.append("jobDescription", jobDescription);
       fd.append("resumes", files[i]);
       fd.append("jobId", jobId);
       try {
-        await fetch("/api/rank", { method: "POST", body: fd });
+        const res = await fetch("/api/rank", { method: "POST", body: fd });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.extractionErrors?.length) {
+            rankErrors.push(...data.extractionErrors);
+          }
+        }
       } catch (err) {
         console.error(`Failed to rank ${files[i].name}:`, err);
       }
       setProgress({ done: i + 1, total: files.length });
+    }
+
+    if (rankErrors.length > 0) {
+      setDropErrors(rankErrors);
     }
 
     // Refresh the full candidates list from DB after all files are ranked
