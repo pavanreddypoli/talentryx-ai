@@ -179,8 +179,11 @@ function FreeCard() {
     setIsLoading(true);
     setError(null);
     try {
-      // TODO: Pass discount code to checkout when Stripe upgrade flow is fixed
-      const res = await fetch("/api/recruiter/billing/checkout", { method: "POST" });
+      const res = await fetch("/api/recruiter/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(applied && appliedCode ? { discount_code: appliedCode } : {}),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Request failed");
       window.location.href = data.url;
