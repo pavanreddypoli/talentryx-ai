@@ -38,7 +38,7 @@ export async function extractDocText(buffer: Buffer): Promise<string> {
 ------------------------- */
 export async function extractPdfText(buffer: Buffer): Promise<string> {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const pdfParse = require("pdf-parse");
+  const pdfParse = require("pdf-parse/lib/pdf-parse");
   const parsed = await pdfParse(buffer);
   if (!parsed?.text?.trim()) {
     throw new Error("PDF parsed but no text could be extracted (possibly a scanned/image-only PDF)");
