@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { diffSentences } from "diff";
 import { parseRewrittenResume, sanitizeFilename } from "@/lib/resumeParser";
@@ -105,8 +105,16 @@ export default function JobSeekerDashboardClient() {
   const [aiError, setAiError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState<"docx" | "pdf" | null>(null);
+  const [extractionErrors, setExtractionErrors] = useState<string[]>([]);
+  const [justRewrote, setJustRewrote] = useState(false);
 
-  const onDrop = (accepted: File[]) => setFiles(accepted);
+  useEffect(() => {
+    if (!justRewrote) return;
+    const t = setTimeout(() => setJustRewrote(false), 30000);
+    return () => clearTimeout(t);
+  }, [justRewrote]);
+
+  const onDrop = (accepted: File[]) => { setFiles(accepted); setJustRewrote(false); };
 
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
@@ -125,6 +133,7 @@ export default function JobSeekerDashboardClient() {
 
     setLoading(true);
     setResults([]);
+    setExtractionErrors([]);
     setProgress(0);
 
     const interval = setInterval(
@@ -146,8 +155,11 @@ export default function JobSeekerDashboardClient() {
       if (!res.ok) throw new Error(data.error);
 
       setResults(data.results || []);
-      setSuccess(true);
-      confetti({ particleCount: 120, spread: 80 });
+      setExtractionErrors(data.extractionErrors || []);
+      if ((data.results || []).length > 0) {
+        setSuccess(true);
+        confetti({ particleCount: 120, spread: 80 });
+      }
     } catch {
       alert("Ranking failed.");
     } finally {
@@ -198,6 +210,7 @@ export default function JobSeekerDashboardClient() {
       if (!res.ok) throw new Error(data?.error || "Rewrite failed");
 
       setAiContent(data?.text || "");
+      setJustRewrote(true);
     } catch (e: any) {
       setAiError(e?.message || "Rewrite failed.");
     } finally {
@@ -505,7 +518,7 @@ export default function JobSeekerDashboardClient() {
             <Textarea
               placeholder="Paste job description here..."
               value={jobDescription}
-              onChange={(e) => setJobDescription(e.target.value)}
+              onChange={(e) => { setJobDescription(e.target.value); setJustRewrote(false); }}
               className="h-[260px] border-slate-200 resize-none focus-visible:ring-brand-amber/50 focus-visible:border-brand-amber"
             />
 
@@ -557,6 +570,37 @@ export default function JobSeekerDashboardClient() {
               className="h-full bg-brand-amber transition-all rounded-full"
               style={{ width: `${progress}%` }}
             />
+          </div>
+        )}
+
+        {/* Post-rewrite guidance banner */}
+        {justRewrote && (
+          <div className="flex items-start justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
+            <p className="text-amber-800">
+              <span className="font-medium">✨ Your rewritten resume is optimized for this JD.</span>{" "}
+              Download it as .docx or .pdf and use it for your application. You don't need to re-upload it here.
+            </p>
+            <button
+              type="button"
+              onClick={() => setJustRewrote(false)}
+              className="shrink-0 text-amber-500 hover:text-amber-700 transition-colors"
+              aria-label="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Extraction error banner */}
+        {extractionErrors.length > 0 && results.length === 0 && (
+          <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm space-y-1">
+            <p className="font-medium text-rose-700">Couldn't extract text from your resume.</p>
+            {extractionErrors.map((e, i) => (
+              <p key={i} className="text-rose-600 text-xs">{e}</p>
+            ))}
+            <p className="text-rose-500 text-xs mt-1">
+              Try uploading as .docx instead, or re-download from the Rewrite modal.
+            </p>
           </div>
         )}
 

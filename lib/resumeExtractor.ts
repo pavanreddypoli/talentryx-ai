@@ -5,13 +5,11 @@ import officeParser from "officeparser";
    DOCX extraction
 ------------------------- */
 export async function extractDocxText(buffer: Buffer): Promise<string> {
-  try {
-    const result = await mammoth.extractRawText({ buffer });
-    return result?.value || "";
-  } catch (err) {
-    console.error("DOCX parse error:", err);
-    return "";
+  const result = await mammoth.extractRawText({ buffer });
+  if (!result?.value?.trim()) {
+    throw new Error("DOCX parsed but no text could be extracted");
   }
+  return result.value;
 }
 
 /* -------------------------
